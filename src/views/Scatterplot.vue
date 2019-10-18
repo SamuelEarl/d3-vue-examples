@@ -135,8 +135,22 @@ export default {
         .attr("width", this.w)
         .attr("height", this.h);
 
-      // Create circles and call scale functions
-      this.svg.selectAll("circle")
+
+      // Define clipping path
+      this.svg.append("clipPath")
+        .attr("id", "chart-area")
+        .append("rect")
+        .attr("x", this.padding)
+        .attr("y", this.padding)
+        .attr("width", this.w - this.padding * 3)
+        .attr("height", this.h - this.padding * 2);
+
+
+      // Create circles (and call scale functions)
+      this.svg.append("g") // Append a "g" element to the SVG
+        .attr("id", "circles") // Give the "g" element an ID of "circles"
+        .attr("clip-path", "url(#chart-area)") // Give the "g" element a reference to the clipPath
+        .selectAll("circle") // Select the elements that you want to create in the SVG
         .data(this.dataset)
         .enter()
         .append("circle")
@@ -215,16 +229,13 @@ export default {
         .attr("cy", function(d) {
           return vm.yScale(d[1]);
         })
-        .on("end", function() {
-          d3.select(this)
-            .transition()
-            .duration(500)
-            .attr("r", function(d) {
-              return vm.aScale(d[2]);
-            })
-            .attr("fill", function(d) {
-              return vm.generateColorValue(d[2]);
-            })
+        .transition()
+        .duration(500)
+        .attr("r", function(d) {
+          return vm.aScale(d[2]);
+        })
+        .attr("fill", function(d) {
+          return vm.generateColorValue(d[2]);
         });
 
       // Update the axes. For each axis, do the following:

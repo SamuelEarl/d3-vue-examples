@@ -3,7 +3,7 @@
     <div id="body"></div>
     <br />
     <button id="click-this" @click="update">
-      Click To Generate Random Data
+      Click To Add A New Bar
     </button>
   </div>
 </template>
@@ -25,6 +25,8 @@ export default {
       h: 250,
       xScale: null,
       yScale: null,
+      bars: null,
+      labels: null,
     };
   },
   watch: {
@@ -132,57 +134,55 @@ export default {
     update() {
       const vm = this;
 
-      // // Set the iterator value to equal the length of the original dataset.
-      // this.numValues = this.dataset.length;
+      const newNumber = Math.floor(Math.random() * this.maxValue);
+      this.dataset.push(newNumber);
 
-      this.generateRandomData();
-
-      // // Push random data to this.dataset.
-      // for (let i = 0; i < this.numValues; i++) {
-      //   const newNumber = Math.floor(Math.random() * this.maxValue);
-      //   this.dataset.push(newNumber);
-      // }
-
-      // Update scale domain
+      // Update scale domains
+      // Recalibrate the X-scale domain, given the new length of dataset.
+      this.xScale.domain(d3.range(this.dataset.length));
       // Recalibrate the Y-scale domain, given the new max value in this.dataset.
       this.yScale.domain([0, d3.max(this.dataset)]);
 
+      this.bars = this.svg.selectAll("rect") // Select all bars
+        .data(this.dataset); // Re-bind data to existing bars and return the "update" selection from the data() method. this.bars is now the update selection.
+
       // Update the shapes and colors of those shapes based on the new data values.
-      this.svg.selectAll("rect")
-        .data(this.dataset)
-        .transition()
-        .delay(function(d, i) {
-          return i / vm.dataset.length * 1000;
-        })
-        .duration(500)
-        .ease(d3.easeLinear)
-        .attr("y", function(d) {
+      this.bars.enter() // References the enter selection (a subset of the update selection)
+        .append("rect") // Creates a new rect
+        .attr("x", this.w) // Sets the initial x position of the rect beyond the far right edge of the SVG
+        .attr("y", function(d) { // Sets the y value, based on the updated yScale
           return vm.h - vm.yScale(d);
         })
-        .attr("height", function(d) {
+        .attr("width", this.xScale.bandwidth()) // Sets the width value, based on the updated xScale
+        .attr("height", function(d) { // Sets the height value, based on the updated yScale
           return vm.yScale(d);
         })
-        .attr("fill", function(d) {
+        .attr("fill", function(d) { // Sets the fill value
           // To get some good color variation in the bars, divide maxValue by 40% of maxValue.
           const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
           return `rgb(0, 0, ${colorValue})`;
+        })
+        .merge(this.bars) // Merges the enter selection (the new bar) with the update selection (the other existing bars)
+        .transition() // Initiate a transition on all elements in the update selection (all rects)
+        .duration(500)
+        .attr("x", function(d, i) { // Set new x position, based on the updated xScale
+          return vm.xScale(i);
+        })
+        .attr("y", function(d) { // Set new y position, based on the updated yScale
+          return vm.h - vm.yScale(d);
+        })
+        .attr("width", this.xScale.bandwidth()) // Set new width value, based on the updated xScale
+        .attr("height", function(d) { // Set new height value, based on the updated yScale
+          return vm.yScale(d);
         });
 
       // Update the labels based on the new data values.
-      this.svg.selectAll("text")
-        .data(this.dataset)
-        .transition()
-        .delay(function(d, i) {
-          return i / vm.dataset.length * 1000;
-        })
-        .duration(500)
-        .ease(d3.easeLinear)
-        .text(function(d) {
-          return d;
-        })
-        // .attr("x", function(d, i) {
-        //   return vm.xScale(i) + vm.xScale.bandwidth() / 2;
-        // })
+      this.labels = this.svg.selectAll("text")
+        .data(this.dataset);
+
+      this.labels.enter()
+        .append("text")
+        .attr("x", this.w)
         .attr("y", function(d) {
           let yValue;
           if (d <= (vm.maxValue * 0.07)) {
@@ -193,6 +193,28 @@ export default {
           }
           return yValue;
         })
+        .merge(this.labels)
+        .transition()
+        .duration(500)
+        .text(function(d) {
+          return d;
+        })
+        .attr("text-anchor", "middle")
+        .attr("x", function(d, i) {
+          return vm.xScale(i) + vm.xScale.bandwidth() / 2;
+        })
+        .attr("y", function(d) {
+          let yValue;
+          if (d <= (vm.maxValue * 0.07)) {
+            yValue = vm.h - vm.yScale(d) - 4;
+          }
+          else {
+            yValue = vm.h - vm.yScale(d) + 14;
+          }
+          return yValue;
+        })
+        .attr("font-family", "sans-serif")
+			  .attr("font-size", "11px")
         .attr("fill", function(d) {
           let fillColor;
           if (d <= (vm.maxValue * 0.07)) {

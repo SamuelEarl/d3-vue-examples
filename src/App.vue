@@ -5,6 +5,7 @@
       <router-link to="/html-bar-chart">HTML Bar Chart</router-link>
       <router-link to="/circles">Circles</router-link>
       <router-link to="/bar-chart">Bar Chart</router-link>
+      <router-link to="/add-bars">Add Bars</router-link>
       <router-link to="/scatterplot">Scatterplot</router-link>
     </nav>
     <router-view/>
