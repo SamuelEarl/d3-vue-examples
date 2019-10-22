@@ -29,9 +29,9 @@ export default new Router({
       component: () => import(/* webpackChunkName: "barChart" */ "./views/BarChart.vue")
     },
     {
-      path: "/add-bars",
-      name: "add-bars",
-      component: () => import(/* webpackChunkName: "addBar" */ "./views/AddBars.vue")
+      path: "/add-remove-bars",
+      name: "add-remove-bars",
+      component: () => import(/* webpackChunkName: "addRemoveBars" */ "./views/AddRemoveBars.vue")
     },
     {
       path: "/scatterplot",
