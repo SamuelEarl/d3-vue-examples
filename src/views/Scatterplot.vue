@@ -1,6 +1,8 @@
 <template>
   <div>
-    <div id="body"></div>
+    <div id="body">
+      <svg id="svg" :width="w" :height="h"></svg>
+    </div>
     <br />
     <button id="click-this" @click="update">
       Click To Generate Random Data
@@ -130,10 +132,10 @@ export default {
 
 
       // Create SVG element
-      this.svg = d3.select("#body")
-        .append("svg")
-        .attr("width", this.w)
-        .attr("height", this.h);
+      this.svg = d3.select("#svg");
+        // .append("svg")
+        // .attr("width", this.w)
+        // .attr("height", this.h);
 
 
       // Define clipping path
@@ -261,23 +263,17 @@ export default {
 </script>
 
 <style lang="stylus" scoped>
+  // Deep selector styles (>>>) for dynamically generated SVG elements:
+  #svg >>> path, line {
+    // stroke: blue;
+    shape-rendering: crispEdges;
+  }
 
-// The "scoped" attribute prevents the SVG styles from being applied, as these components are
-// currently constructed. I need to look at https://medium.com/tyrone-tudehope/composing-d3-visualizations-with-vue-js-c65084ccb686
-// and refactor these components in a more Vue-esque way that will apply the SVG styles.
-
-  .axis {
-    path, line {
-      stroke: yellow; // Change this or comment it out when I get the scoped styles working.
-      shape-rendering: crispEdges;
-    }
-
-    text {
-      font-family: Optima, Futura, sans-serif;
-      // font-weight: bold;
-      // font-size: 14px;
-      // fill: teal;
-    }
+  #svg >>> text {
+    font-family: Optima, Futura, sans-serif;
+    font-weight: bold;
+    font-size: 12px;
+    // fill: teal;
   }
 
   #click-this {

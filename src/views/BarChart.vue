@@ -89,6 +89,19 @@ export default {
           // To get some good color variation in the bars, divide maxValue by 40% of maxValue.
           const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
           return `rgb(0, 0, ${colorValue})`;
+        })
+        .on("mouseover", function() {
+          d3.select(this)
+            .attr("fill", "orange");
+			  })
+			  .on("mouseout", function(d) {
+				  d3.select(this)
+            .transition()
+            .duration(250)
+            .attr("fill", function(d) {
+              const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
+              return `rgb(0, 0, ${colorValue})`;
+            })
         });
 
       // Create labels
@@ -203,35 +216,36 @@ export default {
           }
           return fillColor;
         });
-    }
+    },
   }
 };
 </script>
 
-<style lang="stylus">
-  // If you include the "scoped" property on the <style> tag, then none of the styles will be applied to the elements that D3 dynamically adds to the DOM. But if you remove the "scoped" property, then those styles will not be scoped to only this component and they will be applied to other components.
-  // In many cases you can work around this by manually adding the necessary SVG elements inside the <template> above, as is done in the examples on this page: https://medium.com/tyrone-tudehope/composing-d3-visualizations-with-vue-js-c65084ccb686. However, this might not always be possible. For example, I don't know if there is a way to do that in the chart that is generated in this component.
-  // But you can work around this by removing the "scoped" property and doing some old-fashioned style scoping. Add a unique "id" to the wrapper <div> and then nest all of your styles inside of that unique "id", as I have done below. This will apply the styles to the dynamically generated SVG elements in this component while at the same time preventing any dynamically generated SVG elements in other components from getting styled.
-  #bar-chart {
-    rect {
-      transition: all 0.25s;
-      &:hover {
-        fill: orange;
-      }
-    }
+<style lang="stylus" scoped>
+  // In order to add scoped styles to elements that have been dynamically added to the DOM after the Vue component has been created, you have to use deep selectors (https://vue-loader.vuejs.org/guide/scoped-css.html#deep-selectors).
+  // #body >>> rect {
+  //   transition: all 0.25s;
+  //   &:hover {
+  //     fill: orange;
+  //   }
+  // }
 
-    #click-this {
-      padding: 8px 10px;
-      border: 2px solid navy;
-      font-size: 16px;
-      background-color: transparent;
-      color: darken(navy, 20%);
-      box-shadow: 2px 2px 2px gray;
-      cursor: pointer;
-      outline: none;
-      &:hover {
-        box-shadow: none;
-      }
+  #body >>> text {
+    // Prevent the mouseout event from firing when a user hovers over the text labels in the bars.
+    pointer-events: none;
+  }
+
+  #click-this {
+    padding: 8px 10px;
+    border: 2px solid navy;
+    font-size: 16px;
+    background-color: transparent;
+    color: darken(navy, 20%);
+    box-shadow: 2px 2px 2px gray;
+    cursor: pointer;
+    outline: none;
+    &:hover {
+      box-shadow: none;
     }
   }
 </style>
