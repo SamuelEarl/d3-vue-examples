@@ -3,19 +3,19 @@
     <div id="body"></div>
     <br />
     <button class="click-this" @click="addData">
-      Click To Add Data
+      Add Data
     </button>
 
     &nbsp;
 
     <button class="click-this" @click="removeData">
-      Click To Remove Data
+      Remove Data
     </button>
 
     &nbsp;
 
     <button class="click-this" @click="addRemove">
-      Click To Add &amp; Remove Data
+      Add &amp; Remove Data
     </button>
   </div>
 </template>
@@ -163,12 +163,22 @@ export default {
       const newNumber = Math.floor(Math.random() * this.maxValue);
       // Make sure to give each new data object that is added to the array a key value that is one
       // higher than the key value of the last data object in the array.
-      // Select the last data object in the array:
-      const dataObj = this.dataset[this.dataset.length - 1];
-      // Assign i to be one number higher than the key value of the last data object in the array.
-      const i = dataObj.key + 1;
+      let dataObj;
+      let key;
+      // If there is a least one data object in the dataset array, then...
+      if (this.dataset.length > 0) {
+        // Select the last data object in the array
+        dataObj = this.dataset[this.dataset.length - 1];
+        // Assign "key" to be one number higher than the key value of the last data object in the array.
+        key = dataObj.key + 1;
+      }
+      // If the dataset array is empty, then...
+      else {
+        // Assign "key" the value of 0.
+        key = 0;
+      }
       // Set the key value of the new data object to be i.
-      this.dataset.push({ key: i, value: newNumber });
+      this.dataset.push({ key: key, value: newNumber });
 
       // Update scale domains
       // Recalibrate the X-scale domain, given the new length of dataset.

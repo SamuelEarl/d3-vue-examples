@@ -11,7 +11,7 @@
     &nbsp;
 
     <button id="click-this" @click="sortBars">
-      Sort Bars
+      Toggle Sort Order
     </button>
   </div>
 </template>
@@ -34,6 +34,7 @@ export default {
       h: 250,
       xScale: null,
       yScale: null,
+      sortOrder: false,
     };
   },
   watch: {
@@ -92,7 +93,7 @@ export default {
 			  // })
 			  // .on("mouseout", function(d) {
         //   d3.select(this).select("rect")
-        //     .transition()
+        //     .transition("restoreBarColor")
         //     .duration(250)
         //     .attr("fill", function(d) {
         //       const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
@@ -311,12 +312,22 @@ export default {
     sortBars() {
       const vm = this;
 
+      this.sortOrder = !this.sortOrder;
+
       // Sort the bars
       this.svg.selectAll("rect")
         .sort(function(a, b) {
-          return d3.ascending(a, b);
+          if (vm.sortOrder) {
+            return d3.ascending(a, b);
+          }
+          else {
+            return d3.descending(a, b);
+          }
         })
-        .transition()
+        .transition("sortBars")
+        .delay(function(d, i) {
+          return i * 50;
+        })
         .duration(1000)
         .attr("x", function(d, i) {
           return vm.xScale(i);
@@ -325,9 +336,17 @@ export default {
       // Sort the labels
       this.svg.selectAll("text")
         .sort(function(a, b) {
-          return d3.ascending(a, b);
+          if (vm.sortOrder) {
+            return d3.ascending(a, b);
+          }
+          else {
+            return d3.descending(a, b);
+          }
         })
-        .transition()
+        .transition("sortLabels")
+        .delay(function(d, i) {
+          return i * 50;
+        })
         .duration(1000)
         .attr("x", function(d, i) {
           return vm.xScale(i) + vm.xScale.bandwidth() / 2;
