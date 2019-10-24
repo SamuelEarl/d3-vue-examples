@@ -5,7 +5,13 @@
     </div>
     <br />
     <button id="click-this" @click="randomize">
-      Click To Generate Random Data
+      Generate Random Data
+    </button>
+
+    &nbsp;
+
+    <button id="click-this" @click="sortBars">
+      Sort Bars
     </button>
   </div>
 </template>
@@ -77,22 +83,22 @@ export default {
       this.g = this.svg.selectAll("g")
         .data(this.dataset)
         .enter()
-        .append("g")
-        .on("mouseover", function() {
-          // "this" references the <g> element. You can reference child elements by chaining
-          // additional "select()" functions together and referencing the necessary child elements.
-          d3.select(this).select("rect")
-            .attr("fill", "orange");
-			  })
-			  .on("mouseout", function(d) {
-          d3.select(this).select("rect")
-            .transition()
-            .duration(250)
-            .attr("fill", function(d) {
-              const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
-              return `rgb(0, 0, ${colorValue})`;
-            })
-        });
+        .append("g");
+        // .on("mouseover", function() {
+        //   // "this" references the <g> element. You can reference child elements by chaining
+        //   // additional "select()" functions together and referencing the necessary child elements.
+        //   d3.select(this).select("rect")
+        //     .attr("fill", "orange");
+			  // })
+			  // .on("mouseout", function(d) {
+        //   d3.select(this).select("rect")
+        //     .transition()
+        //     .duration(250)
+        //     .attr("fill", function(d) {
+        //       const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
+        //       return `rgb(0, 0, ${colorValue})`;
+        //     })
+        // });
 
 
       // Append <rect> elements into each <g> element
@@ -301,18 +307,57 @@ export default {
           return fillColor;
         });
     },
+
+    sortBars() {
+      const vm = this;
+
+      // Sort the bars
+      this.svg.selectAll("rect")
+        .sort(function(a, b) {
+          return d3.ascending(a, b);
+        })
+        .transition()
+        .duration(1000)
+        .attr("x", function(d, i) {
+          return vm.xScale(i);
+        });
+
+      // Sort the labels
+      this.svg.selectAll("text")
+        .sort(function(a, b) {
+          return d3.ascending(a, b);
+        })
+        .transition()
+        .duration(1000)
+        .attr("x", function(d, i) {
+          return vm.xScale(i) + vm.xScale.bandwidth() / 2;
+        })
+        .attr("y", function(d) {
+          let yValue;
+          if (d <= (vm.maxValue * 0.07)) {
+            yValue = vm.h - vm.yScale(d) - 4;
+          }
+          else {
+            yValue = vm.h - vm.yScale(d) + 14;
+          }
+          return yValue;
+        });
+    }
   }
 };
 </script>
 
 <style lang="stylus" scoped>
   // In order to add scoped styles to elements that have been dynamically added to the DOM after the Vue component has been created, you have to use deep selectors (https://vue-loader.vuejs.org/guide/scoped-css.html#deep-selectors).
-  // #body >>> rect {
-  //   transition: all 0.25s;
-  //   &:hover {
-  //     fill: orange;
-  //   }
-  // }
+  #body >>> rect {
+    // You have to specify the property that you want to be affected during the transition,
+    // otherwise all properties will be affected and the transition will cause the sorting and
+    // random data generation to look glitchy.
+    transition: fill 0.25s ease 0s;
+    &:hover {
+      fill: orange;
+    }
+  }
 
   #body >>> text {
     // Prevent the bars' mouseout event from firing when a user hovers over the text labels in the bars.
