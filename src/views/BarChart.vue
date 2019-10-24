@@ -1,8 +1,10 @@
 <template>
   <div id="bar-chart">
-    <div id="body"></div>
+    <div id="body">
+      <svg id="svg" :width="w" :height="h"></svg>
+    </div>
     <br />
-    <button id="click-this" @click="update">
+    <button id="click-this" @click="randomize">
       Click To Generate Random Data
     </button>
   </div>
@@ -15,10 +17,11 @@ export default {
   name: "BarChart",
   data() {
     return {
-      svg: null,
       dataset: [
         // 5, 10, 13, 19, 21, 25, 22, 18, 15, 13, 11, 12, 15, 20, 18, 17, 16, 18, 23, 25
       ],
+      svg: null,
+      g: null,
       numValues: 25,
       maxValue: 100,
       w: 600,
@@ -63,17 +66,37 @@ export default {
 				.domain([0, d3.max(this.dataset)])
 				.range([0, this.h]);
 
-      // Create SVG element
-      this.svg = d3.select("#body")
-        .append("svg")
-        .attr("width", this.w)
-        .attr("height", this.h);
+      // Set the selected SVG element to this.svg so you can reference the SVG element later.
+      this.svg = d3.select("#svg");
+        // .append("svg")
+        // .attr("width", this.w)
+        // .attr("height", this.h);
 
-      // Create bars
-      this.svg.selectAll("rect")
+
+      // Create <g> elements and append them into the <svg> element
+      this.g = this.svg.selectAll("g")
         .data(this.dataset)
         .enter()
-        .append("rect")
+        .append("g")
+        .on("mouseover", function() {
+          // "this" references the <g> element. You can reference child elements by chaining
+          // additional "select()" functions together and referencing the necessary child elements.
+          d3.select(this).select("rect")
+            .attr("fill", "orange");
+			  })
+			  .on("mouseout", function(d) {
+          d3.select(this).select("rect")
+            .transition()
+            .duration(250)
+            .attr("fill", function(d) {
+              const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
+              return `rgb(0, 0, ${colorValue})`;
+            })
+        });
+
+
+      // Append <rect> elements into each <g> element
+      this.g.append("rect")
         .attr("x", function(d, i) {
           return vm.xScale(i);
         })
@@ -89,26 +112,11 @@ export default {
           // To get some good color variation in the bars, divide maxValue by 40% of maxValue.
           const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
           return `rgb(0, 0, ${colorValue})`;
-        })
-        .on("mouseover", function() {
-          d3.select(this)
-            .attr("fill", "orange");
-			  })
-			  .on("mouseout", function(d) {
-				  d3.select(this)
-            .transition()
-            .duration(250)
-            .attr("fill", function(d) {
-              const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
-              return `rgb(0, 0, ${colorValue})`;
-            })
         });
 
-      // Create labels
-      this.svg.selectAll("text")
-        .data(this.dataset)
-        .enter()
-        .append("text")
+
+      // Append <text> elements into each <g> element
+      this.g.append("text")
         .text(function(d) {
           return d;
         })
@@ -140,9 +148,81 @@ export default {
           }
           return fillColor;
         });
+
+
+      // this.g.selectAll("rect")
+      //   .data(this.dataset)
+      //   .enter()
+      //   .append("rect")
+      //   .attr("x", function(d, i) {
+      //     return vm.xScale(i);
+      //   })
+      //   // SVG y-coordinates start at the top of the SVG element and move down. So we have to set the y-coordinates as the height of the SVG element minus the data value.
+      //   .attr("y", function(d) {
+      //     return vm.h - vm.yScale(d);
+      //   })
+      //   .attr("width", this.xScale.bandwidth())
+      //   .attr("height", function(d) {
+      //     return vm.yScale(d);
+      //   })
+      //   .attr("fill", function(d) {
+      //     // To get some good color variation in the bars, divide maxValue by 40% of maxValue.
+      //     const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
+      //     return `rgb(0, 0, ${colorValue})`;
+      //   })
+      //   .on("mouseover", function() {
+      //     d3.select(this)
+      //       .attr("fill", "orange");
+			//   })
+			//   .on("mouseout", function(d) {
+			// 	  d3.select(this)
+      //       .transition()
+      //       .duration(250)
+      //       .attr("fill", function(d) {
+      //         const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
+      //         return `rgb(0, 0, ${colorValue})`;
+      //       })
+      //   });
+
+      // // Create labels
+      // this.g.selectAll("text")
+      //   .data(this.dataset)
+      //   .enter()
+      //   .append("text")
+      //   .text(function(d) {
+      //     return d;
+      //   })
+      //   // Beginning of align value labels code
+      //   .attr("text-anchor", "middle")
+      //   .attr("x", function(d, i) {
+      //     return vm.xScale(i) + vm.xScale.bandwidth() / 2;
+      //   })
+      //   .attr("y", function(d) {
+      //     let yValue;
+      //     if (d <= (vm.maxValue * 0.07)) {
+      //       yValue = vm.h - vm.yScale(d) - 4;
+      //     }
+      //     else {
+      //       yValue = vm.h - vm.yScale(d) + 14;
+      //     }
+      //     return yValue;
+      //   })
+      //   // End of align value labels code
+      //   .attr("font-family", "sans-serif")
+      //   .attr("font-size", "11px")
+      //   .attr("fill", function(d) {
+      //     let fillColor;
+      //     if (d <= (vm.maxValue * 0.07)) {
+      //       fillColor = "black";
+      //     }
+      //     else {
+      //       fillColor = "white";
+      //     }
+      //     return fillColor;
+      //   });
     },
 
-    update() {
+    randomize() {
       const vm = this;
 
       // // Set the iterator value to equal the length of the original dataset.
@@ -159,6 +239,10 @@ export default {
       // Update scale domain
       // Recalibrate the Y-scale domain, given the new max value in this.dataset.
       this.yScale.domain([0, d3.max(this.dataset)]);
+
+
+// If I change to following selections to "this.g.selectAll('rect')" then the bar charts break when
+// the data is randomized. I don't understand why that is, but I am going to find out.
 
       // Update the shapes and colors of those shapes based on the new data values.
       this.svg.selectAll("rect")
@@ -231,7 +315,7 @@ export default {
   // }
 
   #body >>> text {
-    // Prevent the mouseout event from firing when a user hovers over the text labels in the bars.
+    // Prevent the bars' mouseout event from firing when a user hovers over the text labels in the bars.
     pointer-events: none;
   }
 
