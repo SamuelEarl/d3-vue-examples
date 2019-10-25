@@ -1,6 +1,10 @@
 <template>
   <div id="bar-chart">
-    <div id="body">
+    <div id="tooltip" class="hidden">
+      <p><strong>Value of Bar</strong></p>
+      <p><span id="value">100</span>%</p>
+    </div>
+    <div id="chart">
       <svg id="svg" :width="w" :height="h"></svg>
     </div>
     <br />
@@ -119,6 +123,28 @@ export default {
           // To get some good color variation in the bars, divide maxValue by 40% of maxValue.
           const colorValue = Math.round(d * (vm.maxValue / (vm.maxValue * 0.4)));
           return `rgb(0, 0, ${colorValue})`;
+        })
+        .on("mouseover", function(d) {
+          // Since the chart is centered on the page, we need to find the x-position of the SVG
+          // container's left edge so we can get an accurate x-position of the bars inside of the
+          // SVG container.
+          const SVGLeftEdge = (window.innerWidth / 2) - (vm.w / 2);
+          // Get this bar's x/y values, then augment for the tooltip
+          const xPosition = parseFloat(d3.select(this).attr("x")) + (vm.xScale.bandwidth() / 2) + SVGLeftEdge;
+          const yPosition = parseFloat(d3.select(this).attr("y")) / 2 + vm.h / 2;
+					//Update the tooltip position and value
+					d3.select("#tooltip")
+						.style("left", xPosition + "px")
+						.style("top", yPosition + "px")
+						.select("#value")
+						.text(d);
+
+					// Show the tooltip
+					d3.select("#tooltip").classed("hidden", false);
+        })
+        .on("mouseout", function() {
+          // Hide the tooltip
+          d3.select("#tooltip").classed("hidden", true);
         });
 
 
@@ -367,8 +393,30 @@ export default {
 </script>
 
 <style lang="stylus" scoped>
+  #tooltip {
+    position: absolute;
+    height: auto;
+    padding: 10px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+    // "pointer-events: none" ensures that mousing over the tooltip itself won’t trigger a mouseout
+    // event on the bars, thereby hiding the tooltip.
+    pointer-events: none;
+    &.hidden {
+      display: none;
+    }
+
+    p {
+      margin: 0;
+      font-family: sans-serif;
+      font-size: 16px;
+      line-height: 20px;
+    }
+  }
+
   // In order to add scoped styles to elements that have been dynamically added to the DOM after the Vue component has been created, you have to use deep selectors (https://vue-loader.vuejs.org/guide/scoped-css.html#deep-selectors).
-  #body >>> rect {
+  #chart >>> rect {
     // You have to specify the property that you want to be affected during the transition,
     // otherwise all properties will be affected and the transition will cause the sorting and
     // random data generation to look glitchy.
@@ -378,8 +426,9 @@ export default {
     }
   }
 
-  #body >>> text {
+  #chart >>> text {
     // Prevent the bars' mouseout event from firing when a user hovers over the text labels in the bars.
+    // This way when a user hovers over the text in the bars, the bars will still be hovered over.
     pointer-events: none;
   }
 
