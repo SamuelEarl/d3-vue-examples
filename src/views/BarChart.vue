@@ -125,11 +125,11 @@ export default {
           return `rgb(0, 0, ${colorValue})`;
         })
         .on("mouseover", function(d) {
-          // Since the chart is centered on the page, we need to find the x-position of the SVG
-          // container's left edge so we can get an accurate x-position of the bars inside of the
-          // SVG container.
-          const SVGLeftEdge = (window.innerWidth / 2) - (vm.w / 2);
-          // Get this bar's x/y values, then augment for the tooltip
+          // We first need to get the x-position of the left edge of the SVG element and then we can
+          // calculate the x-position of the bars from the left edge of the SVG element.
+          const svgEl = document.getElementById("svg");
+          const SVGLeftEdge = svgEl.getBoundingClientRect().left;
+          // Get "this" bar's x/y values, then augment for the tooltip
           const xPosition = parseFloat(d3.select(this).attr("x")) + (vm.xScale.bandwidth() / 2) + SVGLeftEdge;
           const yPosition = parseFloat(d3.select(this).attr("y")) / 2 + vm.h / 2;
 					//Update the tooltip position and value
