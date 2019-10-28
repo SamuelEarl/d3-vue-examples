@@ -42,7 +42,9 @@ export default {
       // Read in data
       // NOTE: The API for d3.csv has changed in D3 v5. It now uses Promises.
       // Read about it here: http://learnjsdata.com/read_data.html.
-      const data = await d3.csv(dataFile);
+      const data = await d3.csv("./mauna_loa_co2_monthly_averages.csv");
+
+      console.log("DATA:", data);
 
       data.forEach(function(d) {
         vm.dataset.push(

@@ -1,6 +1,7 @@
 <template>
   <div id="bar-chart">
     <div id="tooltip" class="hidden">
+      <div id="arrow-left"></div>
       <p><strong>Value of Bar</strong></p>
       <p><span id="value">100</span>%</p>
     </div>
@@ -130,8 +131,10 @@ export default {
           const svgEl = document.getElementById("svg");
           const SVGLeftEdge = svgEl.getBoundingClientRect().left;
           // Get "this" bar's x/y values, then augment for the tooltip
-          const xPosition = parseFloat(d3.select(this).attr("x")) + (vm.xScale.bandwidth() / 2) + SVGLeftEdge;
-          const yPosition = parseFloat(d3.select(this).attr("y")) / 2 + vm.h / 2;
+          const xPosition = parseFloat(d3.select(this).attr("x")) + (vm.xScale.bandwidth() / 2) + SVGLeftEdge + 18;
+          // const yPosition = parseFloat(d3.select(this).attr("y"));// / 2 + vm.h / 2;
+          const yPosition = parseFloat(d3.select(this).attr("y")) + 57;
+
 					//Update the tooltip position and value
 					d3.select("#tooltip")
 						.style("left", xPosition + "px")
@@ -397,12 +400,28 @@ export default {
     position: absolute;
     height: auto;
     padding: 10px;
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+    background-color: #ccc;
+    border-radius: 5px;
+    // Don't use a box-shadow property because I don't think there is a way to sytle the tooltip arrow with a box-shadow.
+    // box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
     // "pointer-events: none" ensures that mousing over the tooltip itself won’t trigger a mouseout
     // event on the bars, thereby hiding the tooltip.
-    pointer-events: none;
+    // pointer-events: none;
+
+    // Tooltip Arrow
+    // https://css-tricks.com/snippets/css/css-triangle/
+    // https://www.w3schools.com/css/css_tooltip.asp
+    &:after {
+      content: " ";
+      position: absolute;
+      top: 50%;
+      right: 100%;
+      margin-top: -7px; // margin-top should be the same as the border width
+      border-top: 7px solid transparent;
+      border-bottom: 7px solid transparent;
+      border-right: 7px solid #ccc;
+    }
+
     &.hidden {
       display: none;
     }
