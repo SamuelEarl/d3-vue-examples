@@ -3,7 +3,7 @@
 <template>
   <div id="time-series-chart">
     <div id="time-series-chart-container">
-      <svg id="svg" :width="w" :height="h"></svg>
+      <!-- <svg id="svg" :width="w" :height="h"></svg> -->
     </div>
   </div>
 </template>
@@ -11,6 +11,7 @@
 <script>
 import * as d3 from "d3";
 import Ring from "ringjs";
+import debounce from "lodash.debounce";
 
 export default {
   name: "LineChart",
@@ -43,17 +44,54 @@ export default {
   watch: {
     // watchers
   },
+
   mounted() {
-    const container = document.getElementById("time-series-chart-container").getBoundingClientRect();
-    console.log("container:", container);
-    this.w = container.width;
-    this.h = container.height;
-    this.generateSeedData();
-    this.renderChart();
-    this.createInterval();
+    const vm = this;
+
+    this.initializeChart();
+
+    // I could make the SVG responsive, as is explained here:
+    // https://stackoverflow.com/questions/16265123/resize-svg-when-window-is-resized-in-d3-js.
+    // But I also need to be able to destroy and recreate the charts when users change certain
+    // settings. So it might be best to use the "window.onresize" event listener.
+    window.onresize = debounce(async (event) => {
+      vm.destroyChart();
+      await this.$nextTick();
+      vm.initializeChart();
+    }, 100);
+  },
+
+  beforeDestroy() {
+    this.destroyChart();
   },
 
   methods: {
+    initializeChart() {
+      this.setDimensions();
+      this.generateSeedData();
+      this.createChart();
+      this.createInterval();
+    },
+
+    setDimensions() {
+      const container = document.getElementById("time-series-chart-container").getBoundingClientRect();
+      // For some reason using an SVG element prevents you from reading the width accurately. I cannot get the width minus the scrollbar width.
+      // Container width - scrollbar width = visible width. I need to either find a dynamic way to retrieve an accurate width or I need to hardcode the width of the scrollbar here, if I know it. Right now I have given the "time-series-chart-container" a "margin-left: 30px;". The width of the scrollbar (without customizing the scrollbar) is 15px, so 30px left margin gives some padding on the left side and I have given the "time-series-chart" <div> a background color, so everything looks nice. I think I will keep it like this.
+      this.w = container.width;
+      this.h = container.height;
+
+      // console.log("container:", container);
+
+      // const clientWidth = document.body.clientWidth;
+      // const scrollWidth = document.body.scrollWidth;
+      // console.log("clientWidth:", clientWidth, "scrollWidth:", scrollWidth);
+
+      // const width1 = window.innerWidth;
+      // const width2 = document.documentElement.clientWidth;
+      // const width3 = document.body.clientWidth;
+      // console.log("width1:", width1, "width2:", width2, "width3:", width3);
+    },
+
     createInterval() {
       this.interval = setInterval(this.updateData, 1000);
     },
@@ -76,11 +114,10 @@ export default {
       this.datasetArray = this.datasetBuffer.toArray();
     },
 
-    renderChart() {
+    createChart() {
       const vm = this;
 
       this.formatTime = d3.timeFormat(`%I:%M:%S`);
-
 
       // Create scale functions
       this.xScale = d3.scaleTime()
@@ -145,7 +182,11 @@ export default {
 
 
       // Create reference to SVG element
-      this.svg = d3.select("#svg");
+      // this.svg = d3.select("#svg");
+      this.svg = d3.select("#time-series-chart-container")
+        .append("svg")
+        .attr("width", this.w)
+        .attr("height", this.h);
 
 
       // Define clipping path
@@ -243,15 +284,15 @@ export default {
           return d.timestamp;
       })]);
 
-      // // Update y-scale domain
-      // // Recalibrate the Y-scale domain, given the possible new min and max values in this.datasetArray.
-      // this.yScale.domain([
-      //   d3.min(this.datasetArray, function(d) {
-      //     return d.value;
-      //   }),
-      //   d3.max(this.datasetArray, function(d) {
-      //     return d.value;
-      // })]);
+      // Update y-scale domain
+      // Recalibrate the Y-scale domain, given the possible new min and max values in this.datasetArray.
+      this.yScale.domain([
+        d3.min(this.datasetArray, function(d) {
+          return d.value;
+        }),
+        d3.max(this.datasetArray, function(d) {
+          return d.value;
+      })]);
 
 
       // Redraw path and shift it left
@@ -302,44 +343,61 @@ export default {
       //   this.dataset.shift();
       // }
     },
+
+    destroyChart() {
+      // Destroy SVG elements (i.e., remove the SVG element).
+      const containerElement = document.getElementById("time-series-chart-container");
+      containerElement.removeChild(containerElement.childNodes[0]);
+
+      // Destroy interval.
+      clearInterval(this.interval);
+      this.interval = null;
+
+      // Destroy datasetBuffer and datasetArray.
+      this.datasetBuffer = null;
+      this.datasetArray = null;
+    }
   }
 };
 </script>
 
 <style lang="stylus" scoped>
   #time-series-chart {
-    height: calc(100vh - 81px);
+    // height = 100vh - the nav header
+    height: calc(100vh - 78px);
+    background-color: #282c34;
 
     #time-series-chart-container {
       height: 100%;
+      margin-right: 30px;
     }
   }
 
-  #svg {
+  #time-series-chart-container >>> svg {
     background-color: #282c34;
   }
 
   // Styles for plotted line
-  #svg >>> #line-graph .line {
+  #time-series-chart-container >>> #line-graph .line {
     fill: none;
     stroke: #4d78cc;
     stroke-width: 2;
   }
 
   // Styles for axes lines (.axis path) and tick marks (.axis .tick line),
-  #svg >>> .axis path, #svg >>> .axis .tick line {
+  #time-series-chart-container >>> .axis path, #time-series-chart-container >>> .axis .tick line {
     stroke: #818a9d;
     shape-rendering: crispEdges;
   }
 
   // Styles for axis tick labels
-  #svg >>> .axis .tick text {
+  #time-series-chart-container >>> .axis .tick text {
     font-size: 0.75rem;
     fill: #818a9d;
   }
 
   // Styles for x-axis tick labels
-  #svg >>> .x.axis .tick text {
+  #time-series-chart-container >>> .x.axis .tick text {
     transform: rotate(-45deg);
   }
 </style>
