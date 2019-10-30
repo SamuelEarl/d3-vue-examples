@@ -32,6 +32,11 @@ export default {
       formatTime: null,
       maxValue: 100,
       interval: null,
+      newTimestamp: null,
+
+      globalX: 0,
+      max: 500,
+      step: 1000,
     };
   },
   watch: {
@@ -141,7 +146,7 @@ export default {
       // Create axes
       // The axes should be created after the other elements so that, if there is any overlap
       // between the elements, the axes are drawn on top of the other elements.
-      this.xAxis = this.svg.append("g")
+      this.svg.append("g")
         .attr("class", "x axis")
         .attr("transform", `translate(0, ${this.h - this.padding})`)
         .call(this.xAxis)
@@ -151,7 +156,7 @@ export default {
           .attr("dy", "0.25rem")
           .attr("transform", "rotate(-45)");
 
-      this.yAxis = this.svg.append("g")
+      this.svg.append("g")
         .attr("class", "y axis")
         .attr("transform", `translate(${this.padding}, 0)`)
         .call(this.yAxis);
@@ -164,7 +169,7 @@ export default {
       // Begin create new datapoint
       // ---------------------------
       const lastTimestamp = this.dataset[this.dataset.length - 1].timestamp;
-      const newTimestamp = lastTimestamp + 1000;
+      this.newTimestamp = lastTimestamp + 1000;
 
       const newValue = Math.floor(Math.random() * this.maxValue);
       // Make sure to give each new data object that is added to the array a key value that is one
@@ -184,7 +189,7 @@ export default {
         key = 0;
       }
       // Set the key value of the new data object to be key.
-      this.dataset.push({ key: key, timestamp: newTimestamp, value: newValue });
+      this.dataset.push({ key: key, timestamp: this.newTimestamp, value: newValue });
       // --------------------------
       // End create new data point
       // --------------------------
@@ -223,37 +228,37 @@ export default {
 
       // Redraw path and shift it left
       this.path
-        .attr("d", this.lineGenerator)
-        .attr("tranform", null)
-        .transition()
-        .duration(1000)
-        .ease(d3.easeLinear)
-        .attr("transform", "translate(-2)");
+        // .attr("transform", null)
+		    // .transition()
+		    // .duration(1000)
+		    // .ease(d3.easeLinear,2)
+		    // .attr("transform", "translate(" + xScale(this.globalX - this.max) + ")");
 
         // .datum(this.dataset, this.key)
         // .attr("class", "line")
-        // .attr("d", this.lineGenerator)
-		    // .transition()
-		    // .duration(1000)
-		    // .ease(d3.easeLinear)
-        // .attr("transform", `translate(-10, 0)`);
+        .attr("d", this.lineGenerator)
+		    .transition()
+		    .duration(1000)
+		    .ease(d3.easeLinear);
 
 
-      // this.xAxis = this.svg.append("g")
-      //   .attr("class", "axis")
-      //   .attr("transform", `translate(0, ${this.h - this.padding})`)
-      //   .call(this.xAxis)
-      //   .selectAll("text")
-      //     .style("text-anchor", "end")
-      //     .attr("dx", "-0.5rem")
-      //     .attr("dy", "0.25rem")
-      //     .attr("transform", "rotate(-45)");
+      // Update the axes. For each axis, do the following:
+      // 1. Select the axis.
+      // 2. Initiate a transition.
+      // 3. Set the transition's duration.
+      // 4. Call the appropriate axis generator. Make sure that "this.xAxis" equals the original axis definition. I accidentally set "this.xAxis" to the axis that was created and I got errors because of that.
 
-
-      this.xAxis = this.xAxis.transition()
-        .duration(1000)
-        .ease(d3.easeLinear)
-        .call(vm.xAxis);
+      // Update X-axis
+      this.svg.select(".x.axis")
+        // .transition()
+        // .duration(1000)
+        // .ease(d3.easeLinear)
+        .call(this.xAxis)
+        .selectAll("text")
+          .style("text-anchor", "end")
+          .attr("dx", "-0.5rem")
+          .attr("dy", "0.25rem")
+          .attr("transform", "rotate(-45)");
     },
   }
 };
