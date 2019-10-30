@@ -20,6 +20,7 @@ export default {
       h: 300,
       group: null,
       padding: 40,
+      axisLabelPadding: 5, // Used to give the labels a bit of padding so they don't get cut off
       dataset: [],
       numDataPoints: 60,
       xScale: null,
@@ -33,10 +34,7 @@ export default {
       maxValue: 100,
       interval: null,
       newTimestamp: null,
-
-      globalX: 0,
-      max: 500,
-      step: 1000,
+      duration: 500,
     };
   },
   watch: {
@@ -89,13 +87,22 @@ export default {
 
       this.yScale = d3.scaleLinear()
         .domain([
-          d3.min(this.dataset, function(d) {
-            return d.value;
-          }),
-          d3.max(this.dataset, function(d) {
-            return d.value;
-        })])
-        .range([this.h - this.padding, 0]);
+          // If the y-scale domain values are set to the highest and lowest possible values from the
+          // beginning, then all of the data points will fit inside the chart no matter how high or
+          // low they are.
+          0, this.maxValue
+
+          // These would create dynamic y-scale domains, but I would have to update these y-scale
+          // domains in the "updateChart" method each time a new data value is plotted in order to
+          // keep the values inside the chart.
+          // d3.min(this.dataset, function(d) {
+          //   return d.value;
+          // }),
+          // d3.max(this.dataset, function(d) {
+          //   return d.value;
+          // })
+        ])
+        .range([this.h - this.padding, this.axisLabelPadding]);
 
 
       // Define key function, to be used when binding data.
@@ -132,8 +139,20 @@ export default {
       this.svg = d3.select("#svg");
 
 
+      // Define clipping path
+      this.svg.append("clipPath")
+        .attr("id", "chart-area")
+        .append("rect")
+        .attr("x", this.padding)
+        .attr("y", 0)
+        .attr("width", this.w - this.padding)
+        .attr("height", this.h);
+
+
       // Append group element
-      this.group = this.svg.append("g");
+      this.group = this.svg.append("g")
+        .attr("id", "line-graph")
+        .attr("clip-path", "url(#chart-area");
 
 
       // Append path / create line
@@ -153,8 +172,7 @@ export default {
         .selectAll("text")
           .style("text-anchor", "end")
           .attr("dx", "-0.5rem")
-          .attr("dy", "0.25rem")
-          .attr("transform", "rotate(-45)");
+          .attr("dy", "0.25rem");
 
       this.svg.append("g")
         .attr("class", "y axis")
@@ -165,9 +183,9 @@ export default {
     updateData() {
       const vm = this;
 
-      // ---------------------------
-      // Begin create new datapoint
-      // ---------------------------
+      // -----------------------------------
+      // Beginning of create new data point
+      // -----------------------------------
       const lastTimestamp = this.dataset[this.dataset.length - 1].timestamp;
       this.newTimestamp = lastTimestamp + 1000;
 
@@ -190,13 +208,16 @@ export default {
       }
       // Set the key value of the new data object to be key.
       this.dataset.push({ key: key, timestamp: this.newTimestamp, value: newValue });
-      // --------------------------
-      // End create new data point
-      // --------------------------
+      // -----------------------------
+      // End of create new data point
+      // -----------------------------
 
-      if (this.dataset.length >= this.numDataPoints) {
-        this.dataset.shift();
-      }
+      // --------------------------------------------------------------------------------------------
+      //  Remove data point - search for "Remove data point" in this file and read the comment there
+      // --------------------------------------------------------------------------------------------
+      // if (this.dataset.length >= this.numDataPoints) {
+      //   this.dataset.shift();
+      // }
 
       // Call this.updateChart()
       this.updateChart();
@@ -227,19 +248,23 @@ export default {
 
 
       // Redraw path and shift it left
+      // To get the data to transition smoothly, I referenced the code from this chart and modified it:
+      // http://bl.ocks.org/denisemauldin/ceb7065687c125223339a26a47d58a28
+      // Also, this one might be helpful: https://jsfiddle.net/peDzT/
       this.path
-        // .attr("transform", null)
-		    // .transition()
-		    // .duration(1000)
-		    // .ease(d3.easeLinear,2)
-		    // .attr("transform", "translate(" + xScale(this.globalX - this.max) + ")");
-
-        // .datum(this.dataset, this.key)
-        // .attr("class", "line")
         .attr("d", this.lineGenerator)
+        .attr("transform", null)
 		    .transition()
-		    .duration(1000)
-		    .ease(d3.easeLinear);
+		    .duration(this.duration)
+		    .ease(d3.easeLinear)
+		    .attr("transform", `translate(${this.xScale(this.newTimestamp - 1000 * 64)})`);
+
+// I would like to test these methods to see if they update the chart with less memory usage:
+      // this.path
+      //   .attr("d", this.lineGenerator)
+		  //   .transition()
+		  //   .duration(this.duration)
+      //   .ease(d3.easeLinear);
 
 
       // Update the axes. For each axis, do the following:
@@ -250,15 +275,24 @@ export default {
 
       // Update X-axis
       this.svg.select(".x.axis")
-        // .transition()
-        // .duration(1000)
-        // .ease(d3.easeLinear)
+        .transition()
+        .duration(this.duration)
+        .ease(d3.easeLinear)
         .call(this.xAxis)
         .selectAll("text")
           .style("text-anchor", "end")
           .attr("dx", "-0.5rem")
-          .attr("dy", "0.25rem")
-          .attr("transform", "rotate(-45)");
+          .attr("dy", "0.25rem");
+
+
+      // -------------------
+      //  Remove data point
+      // -------------------
+      // If I use the smooth transitions, then keep this conditional statement here.
+      // If I do not use smooth transitions, then keep the conditional statement at the end of the "updateData" method.
+      if (this.dataset.length >= this.numDataPoints) {
+        this.dataset.shift();
+      }
     },
   }
 };
@@ -284,5 +318,9 @@ export default {
     font-family: Helvetica, sans-serif;
     font-size: 12px;
     fill: red;
+  }
+
+  #svg >>> .x.axis .tick text {
+    transform: rotate(-45deg);
   }
 </style>
