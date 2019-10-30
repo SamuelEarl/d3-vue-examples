@@ -299,10 +299,14 @@ export default {
 </script>
 
 <style lang="stylus" scoped>
+  #svg {
+    background-color: #282c34;
+  }
+
   #svg >>> .line {
     fill: none;
-    stroke: blue;
-    stroke-width: 0.5;
+    stroke: #4d78cc;
+    stroke-width: 2;
   }
 
   #svg >>> .safe-level {
@@ -318,6 +322,11 @@ export default {
     font-family: Helvetica, sans-serif;
     font-size: 12px;
     fill: red;
+  }
+
+  // Style the axes and labels
+  #svg >>> path, #svg >>> line, #svg >>> .axis {
+    stroke: #818a9d;
   }
 
   #svg >>> .x.axis .tick text {
