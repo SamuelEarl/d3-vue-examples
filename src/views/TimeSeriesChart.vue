@@ -1,8 +1,8 @@
 // D3.js real-time line chart with circle markers: https://stackoverflow.com/questions/54277572/d3-js-realtime-line-chart-with-circle
 
 <template>
-  <div id="line-chart">
-    <div id="chart-container">
+  <div id="time-series-chart">
+    <div id="time-series-chart-container">
       <svg id="svg" :width="w" :height="h"></svg>
     </div>
   </div>
@@ -10,6 +10,7 @@
 
 <script>
 import * as d3 from "d3";
+import Ring from "ringjs";
 
 export default {
   name: "LineChart",
@@ -19,9 +20,11 @@ export default {
       w: 800,
       h: 300,
       group: null,
-      padding: 40,
-      axisLabelPadding: 5, // Used to give the labels a bit of padding so they don't get cut off
-      dataset: [],
+      paddingTop: 20, // Create padding around the axes by using these values in the range() methods.
+      paddingBottom: 60,
+      paddingLeft: 40,
+      datasetBuffer: null, // This will be a circle buffer
+      datasetArray: null, // This will be a plain array generated from the circle buffer
       numDataPoints: 60,
       xScale: null,
       yScale: null,
@@ -41,6 +44,10 @@ export default {
     // watchers
   },
   mounted() {
+    const container = document.getElementById("time-series-chart-container").getBoundingClientRect();
+    console.log("container:", container);
+    this.w = container.width;
+    this.h = container.height;
     this.generateSeedData();
     this.renderChart();
     this.createInterval();
@@ -52,19 +59,21 @@ export default {
     },
 
     generateSeedData() {
-      // Set this.dataset to an empty array.
-      this.dataset = [];
+      // Set this.datasetBuffer to a circular buffer.
+      this.datasetBuffer = new Ring(this.numDataPoints);
 
       // First timestamp in chart
       const beginTime = Date.now() - (1000 * this.numDataPoints);
 
-      // Push random data to this.dataset.
+      // Push random data to this.datasetBuffer.
       for (let i = 0; i < this.numDataPoints; i++) {
         const timestamp = beginTime + (1000 * i);
         const value = Math.floor(Math.random() * this.maxValue);
-        // this.dataset.push({ key: i, value: newNumber });
-        this.dataset.push({ key: i, timestamp: timestamp, value: value });
+        this.datasetBuffer.push({ key: i, timestamp: timestamp, value: value });
       }
+
+      // D3.js has to work with plain arrays, so convert the initial seed data from the dataset buffer to an array.
+      this.datasetArray = this.datasetBuffer.toArray();
     },
 
     renderChart() {
@@ -76,14 +85,14 @@ export default {
       // Create scale functions
       this.xScale = d3.scaleTime()
         .domain([
-          d3.min(this.dataset, function(d) {
+          d3.min(this.datasetArray, function(d) {
             return d.timestamp;
           }),
-          d3.max(this.dataset, function(d) {
+          d3.max(this.datasetArray, function(d) {
             return d.timestamp;
           })
         ])
-        .range([this.padding, this.w]);
+        .range([this.paddingLeft, this.w]);
 
       this.yScale = d3.scaleLinear()
         .domain([
@@ -95,14 +104,14 @@ export default {
           // These would create dynamic y-scale domains, but I would have to update these y-scale
           // domains in the "updateChart" method each time a new data value is plotted in order to
           // keep the values inside the chart.
-          // d3.min(this.dataset, function(d) {
+          // d3.min(this.datasetArray, function(d) {
           //   return d.value;
           // }),
-          // d3.max(this.dataset, function(d) {
+          // d3.max(this.datasetArray, function(d) {
           //   return d.value;
           // })
         ])
-        .range([this.h - this.padding, this.axisLabelPadding]);
+        .range([this.h - this.paddingBottom, this.paddingTop]);
 
 
       // Define key function, to be used when binding data.
@@ -143,9 +152,9 @@ export default {
       this.svg.append("clipPath")
         .attr("id", "chart-area")
         .append("rect")
-        .attr("x", this.padding)
+        .attr("x", this.paddingLeft)
         .attr("y", 0)
-        .attr("width", this.w - this.padding)
+        .attr("width", this.w - this.paddingLeft)
         .attr("height", this.h);
 
 
@@ -157,7 +166,7 @@ export default {
 
       // Append path / create line
       this.path = this.group.append("path")
-        .datum(this.dataset, this.key)
+        .datum(this.datasetArray, this.key)
         .attr("class", "line")
         .attr("d", this.lineGenerator);
 
@@ -167,7 +176,7 @@ export default {
       // between the elements, the axes are drawn on top of the other elements.
       this.svg.append("g")
         .attr("class", "x axis")
-        .attr("transform", `translate(0, ${this.h - this.padding})`)
+        .attr("transform", `translate(0, ${this.h - this.paddingBottom})`)
         .call(this.xAxis)
         .selectAll("text")
           .style("text-anchor", "end")
@@ -176,7 +185,7 @@ export default {
 
       this.svg.append("g")
         .attr("class", "y axis")
-        .attr("transform", `translate(${this.padding}, 0)`)
+        .attr("transform", `translate(${this.paddingLeft}, 0)`)
         .call(this.yAxis);
     },
 
@@ -186,7 +195,8 @@ export default {
       // -----------------------------------
       // Beginning of create new data point
       // -----------------------------------
-      const lastTimestamp = this.dataset[this.dataset.length - 1].timestamp;
+      // Convert this.datasetBuffer to an array so you can access the elements in the circle buffer.
+      const lastTimestamp = this.datasetArray[this.datasetArray.length - 1].timestamp;
       this.newTimestamp = lastTimestamp + 1000;
 
       const newValue = Math.floor(Math.random() * this.maxValue);
@@ -195,9 +205,9 @@ export default {
       let dataObj;
       let key;
       // If there is a least one data object in the dataset array, then...
-      if (this.dataset.length > 0) {
+      if (this.datasetArray.length > 0) {
         // Select the last data object in the array
-        dataObj = this.dataset[this.dataset.length - 1];
+        dataObj = this.datasetArray[this.datasetArray.length - 1];
         // Assign "key" to be one number higher than the key value of the last data object in the array.
         key = dataObj.key + 1;
       }
@@ -206,18 +216,15 @@ export default {
         // Assign "key" the value of 0.
         key = 0;
       }
-      // Set the key value of the new data object to be key.
-      this.dataset.push({ key: key, timestamp: this.newTimestamp, value: newValue });
+
+      // Push the new data point object to this.datasetBuffer
+      this.datasetBuffer.push({ key: key, timestamp: this.newTimestamp, value: newValue });
+
+      // Set this.datasetArray to equal the updated circle buffer
+      this.datasetArray = this.datasetBuffer.toArray();
       // -----------------------------
       // End of create new data point
       // -----------------------------
-
-      // --------------------------------------------------------------------------------------------
-      //  Remove data point - search for "Remove data point" in this file and read the comment there
-      // --------------------------------------------------------------------------------------------
-      // if (this.dataset.length >= this.numDataPoints) {
-      //   this.dataset.shift();
-      // }
 
       // Call this.updateChart()
       this.updateChart();
@@ -227,22 +234,22 @@ export default {
       const vm = this;
 
       // Update x-scale domain to shift the chart to the left
-      // Recalibrate the x-scale domain, given the possible new min and max values in this.dataset.
+      // Recalibrate the x-scale domain, given the possible new min and max values in this.datasetArray.
       this.xScale.domain([
-        d3.min(this.dataset, function(d) {
+        d3.min(this.datasetArray, function(d) {
           return d.timestamp;
         }),
-        d3.max(this.dataset, function(d) {
+        d3.max(this.datasetArray, function(d) {
           return d.timestamp;
       })]);
 
       // // Update y-scale domain
-      // // Recalibrate the Y-scale domain, given the possible new min and max values in this.dataset.
+      // // Recalibrate the Y-scale domain, given the possible new min and max values in this.datasetArray.
       // this.yScale.domain([
-      //   d3.min(this.dataset, function(d) {
+      //   d3.min(this.datasetArray, function(d) {
       //     return d.value;
       //   }),
-      //   d3.max(this.dataset, function(d) {
+      //   d3.max(this.datasetArray, function(d) {
       //     return d.value;
       // })]);
 
@@ -252,12 +259,13 @@ export default {
       // http://bl.ocks.org/denisemauldin/ceb7065687c125223339a26a47d58a28
       // Also, this one might be helpful: https://jsfiddle.net/peDzT/
       this.path
-        .attr("d", this.lineGenerator)
-        .attr("transform", null)
-		    .transition()
-		    .duration(this.duration)
-		    .ease(d3.easeLinear)
-		    .attr("transform", `translate(${this.xScale(this.newTimestamp - 1000 * 64)})`);
+        .datum(this.datasetArray, this.key)
+        .attr("d", this.lineGenerator);
+        // .attr("transform", null)
+		    // .transition()
+		    // .duration(this.duration)
+		    // .ease(d3.easeLinear)
+		    // .attr("transform", `translate(${this.xScale(this.newTimestamp - 1000 * 64)})`);
 
 // I would like to test these methods to see if they update the chart with less memory usage:
       // this.path
@@ -275,9 +283,9 @@ export default {
 
       // Update X-axis
       this.svg.select(".x.axis")
-        .transition()
-        .duration(this.duration)
-        .ease(d3.easeLinear)
+        // .transition()
+        // .duration(this.duration)
+        // .ease(d3.easeLinear)
         .call(this.xAxis)
         .selectAll("text")
           .style("text-anchor", "end")
@@ -285,50 +293,52 @@ export default {
           .attr("dy", "0.25rem");
 
 
-      // -------------------
-      //  Remove data point
-      // -------------------
-      // If I use the smooth transitions, then keep this conditional statement here.
-      // If I do not use smooth transitions, then keep the conditional statement at the end of the "updateData" method.
-      if (this.dataset.length >= this.numDataPoints) {
-        this.dataset.shift();
-      }
+      // // -------------------
+      // //  Remove data point
+      // // -------------------
+      // // If I use the smooth transitions, then keep this conditional statement here.
+      // // If I do not use smooth transitions, then keep the conditional statement at the end of the "updateData" method.
+      // if (this.datasetArray.length >= this.numDataPoints) {
+      //   this.dataset.shift();
+      // }
     },
   }
 };
 </script>
 
 <style lang="stylus" scoped>
+  #time-series-chart {
+    height: calc(100vh - 81px);
+
+    #time-series-chart-container {
+      height: 100%;
+    }
+  }
+
   #svg {
     background-color: #282c34;
   }
 
-  #svg >>> .line {
+  // Styles for plotted line
+  #svg >>> #line-graph .line {
     fill: none;
     stroke: #4d78cc;
     stroke-width: 2;
   }
 
-  #svg >>> .safe-level {
-    stroke: red;
-    stroke-dasharray: 2, 3;
-  }
-
-  #svg >>> .danger {
-    stroke: red;
-  }
-
-  #svg >>> .danger-label {
-    font-family: Helvetica, sans-serif;
-    font-size: 12px;
-    fill: red;
-  }
-
-  // Style the axes and labels
-  #svg >>> path, #svg >>> line, #svg >>> .axis {
+  // Styles for axes lines (.axis path) and tick marks (.axis .tick line),
+  #svg >>> .axis path, #svg >>> .axis .tick line {
     stroke: #818a9d;
+    shape-rendering: crispEdges;
   }
 
+  // Styles for axis tick labels
+  #svg >>> .axis .tick text {
+    font-size: 0.75rem;
+    fill: #818a9d;
+  }
+
+  // Styles for x-axis tick labels
   #svg >>> .x.axis .tick text {
     transform: rotate(-45deg);
   }
