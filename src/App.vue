@@ -8,6 +8,8 @@
       <router-link to="/add-remove-bars">Add/Remove Bars</router-link>
       <router-link to="/scatterplot">Scatterplot</router-link>
       <router-link to="/line-chart">Line Chart</router-link>
+      <router-link to="/live-data-line-chart">Live Data Line Chart</router-link>
+      <router-link to="/area-chart">Area Chart</router-link>
     </nav>
     <router-view/>
   </div>

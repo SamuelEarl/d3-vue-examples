@@ -22,8 +22,8 @@ export default {
       yScale: null,
       xAxis: null,
       yAxis: null,
-      line: null,
-      dangerLine: null,
+      area: null,
+      dangerArea: null,
       formatTime: null,
     };
   },
@@ -48,6 +48,9 @@ export default {
       // Read in data
       // NOTE: The API for d3.csv has changed in D3 v5. It now uses Promises.
       // Read about it here: http://learnjsdata.com/read_data.html.
+
+// I HAD THIS WORKING ON FRIDAY. CAME BACK MONDAY AND IT WOULD NOT WORK. IT LOOKS LIKE THERE IS SOME ERROR IN THE d3.csv and d3.json FUNCTIONS. FOR SOME REASON THEY ARE NOT READING DATA. THEY ONLY RETURN AN ERROR (SPECIFICALLY, THEY RETURN index.html).
+// I AM GOING TO STOP MESSING AROUND WITH THIS AND MOVE ON WITH MY LIFE. THIS IS VERY INFURIATING!!!
       const data = await d3.csv(dataFile);
 
       data.forEach(function(d) {
@@ -105,28 +108,34 @@ export default {
         .ticks(10);
 
 
-      // Define line generators
-      this.line = d3.line()
+      // Define area generators
+      this.area = d3.area()
         // If d.average is a valid value (e.g., if d.average is greater than or equal to zero in
         // this case), then return true so that the value will be included in the graph of the line.
         .defined(function(d) {
-          return d.average >= 0 && d.average <= 350;
+          return d.average >= 0;
         })
         .x(function(d) {
           return vm.xScale(d.date);
         })
-        .y(function(d) {
+        .y0(function() {
+          return vm.yScale.range()[0];
+        })
+        .y1(function(d) {
           return vm.yScale(d.average);
         });
 
-      this.dangerLine = d3.line()
+      this.dangerArea = d3.area()
         .defined(function(d) {
-          return d.average > 350;
+          return d.average >= 350;
         })
         .x(function(d) {
           return vm.xScale(d.date);
         })
-        .y(function(d) {
+        .y0(function() {
+          return vm.yScale(350);
+        })
+        .y1(function(d) {
           return vm.yScale(d.average);
         });
 
@@ -135,16 +144,16 @@ export default {
       this.svg = d3.select("#svg");
 
 
-      // Create lines
+      // Create areas
       this.svg.append("path")
         .datum(this.dataset)
-        .attr("class", "line")
-        .attr("d", this.line);
+        .attr("class", "area")
+        .attr("d", this.area);
 
       this.svg.append("path")
         .datum(this.dataset)
-        .attr("class", "line danger")
-        .attr("d", this.dangerLine);
+        .attr("class", "area danger")
+        .attr("d", this.dangerArea);
 
 
       // Create axes
@@ -181,9 +190,14 @@ export default {
 </script>
 
 <style lang="stylus" scoped>
+  #svg >>> .area {
+    fill: teal;
+    stroke: none;
+  }
+
   #svg >>> .line {
     fill: none;
-    stroke: blue;
+    stroke: teal;
     stroke-width: 0.5;
   }
 
@@ -193,7 +207,7 @@ export default {
   }
 
   #svg >>> .danger {
-    stroke: red;
+    fill: red;
   }
 
   #svg >>> .danger-label {

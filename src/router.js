@@ -43,5 +43,15 @@ export default new Router({
       name: "line-chart",
       component: () => import(/* webpackChunkName: "lineChart" */ "./views/LineChart.vue")
     },
+    {
+      path: "/live-data-line-chart",
+      name: "live-data-line-chart",
+      component: () => import(/* webpackChunkName: "liveDataLineChart" */ "./views/LiveDataLineChart.vue")
+    },
+    {
+      path: "/area-chart",
+      name: "area-chart",
+      component: () => import(/* webpackChunkName: "areaChart" */ "./views/AreaChart.vue")
+    },
   ]
 })
