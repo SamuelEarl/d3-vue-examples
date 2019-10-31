@@ -2,8 +2,18 @@
 
 <template>
   <div id="time-series-chart">
-    <div id="time-series-chart-container">
-      <!-- <svg id="svg" :width="w" :height="h"></svg> -->
+    <div id="btn-bar">
+      <button class="btn" @click="showSidebar = !showSidebar">Toggle Sidebar</button>
+      <br /><br />
+      <p>Toggle the sidebar to see the chart's responsive design. The chart will redraw itself to fill the space.</p>
+    </div>
+    <div id="flex-container">
+      <div id="sidebar" v-if="showSidebar">
+        Sidebar
+      </div>
+      <div id="time-series-chart-container">
+        <!-- <svg id="svg" :width="w" :height="h"></svg> -->
+      </div>
     </div>
   </div>
 </template>
@@ -17,6 +27,7 @@ export default {
   name: "LineChart",
   data() {
     return {
+      showSidebar: true,
       svg: null,
       w: 800,
       h: 300,
@@ -42,7 +53,9 @@ export default {
     };
   },
   watch: {
-    // watchers
+    showSidebar() {
+      this.recreateChart();
+    }
   },
 
   mounted() {
@@ -54,10 +67,8 @@ export default {
     // https://stackoverflow.com/questions/16265123/resize-svg-when-window-is-resized-in-d3-js.
     // But I also need to be able to destroy and recreate the charts when users change certain
     // settings. So it might be best to use the "window.onresize" event listener.
-    window.onresize = debounce(async (event) => {
-      vm.destroyChart();
-      await this.$nextTick();
-      vm.initializeChart();
+    window.onresize = debounce((event) => {
+      vm.recreateChart();
     }, 100);
   },
 
@@ -66,6 +77,14 @@ export default {
   },
 
   methods: {
+    async recreateChart() {
+      this.destroyChart();
+      // To ensure that the previous chart is completely destroyed before the new chart is created,
+      // call this.$nextTick() to wait until the next DOM update cycle before creating the new chart.
+      await this.$nextTick();
+      this.initializeChart();
+    },
+
     initializeChart() {
       this.setDimensions();
       this.generateSeedData();
@@ -76,7 +95,8 @@ export default {
     setDimensions() {
       const container = document.getElementById("time-series-chart-container").getBoundingClientRect();
       // For some reason using an SVG element prevents you from reading the width accurately. I cannot get the width minus the scrollbar width.
-      // Container width - scrollbar width = visible width. I need to either find a dynamic way to retrieve an accurate width or I need to hardcode the width of the scrollbar here, if I know it. Right now I have given the "time-series-chart-container" a "margin-left: 30px;". The width of the scrollbar (without customizing the scrollbar) is 15px, so 30px left margin gives some padding on the left side and I have given the "time-series-chart" <div> a background color, so everything looks nice. I think I will keep it like this.
+      // Container width - scrollbar width = visible width. I need to either find a dynamic way to retrieve an accurate width or I need to hardcode the width of the scrollbar here, if I know it. Right now I have given the "time-series-chart-container" a "margin-right: 30px;". The width of the scrollbar (without customizing the scrollbar) is 15px, so 30px right margin gives some padding on the right side and I have given the "time-series-chart" <div> a background color, so everything looks nice. I think I will keep it like this.
+      // UPDATE: Using Flexbox to create flex containers seems to have fixed all of the issues with the SVG spilling out of its container. So I have removed the "margin-right: 30px" from the "time-series-chart-container".
       this.w = container.width;
       this.h = container.height;
 
@@ -363,19 +383,46 @@ export default {
 
 <style lang="stylus" scoped>
   #time-series-chart {
-    // height = 100vh - the nav header
-    height: calc(100vh - 78px);
-    background-color: #282c34;
+    // height = 100vh - nav_header - btn_bar
+    height: calc(100vh - 78px - 58px);
 
-    #time-series-chart-container {
+    #btn-bar {
+      margin-bottom: 20px;
+
+      .btn {
+        padding: 10px;
+        background-color: lighten(#282c34, 10%);
+        color: #bbb;
+        border: none;
+        outline: none;
+      }
+    }
+
+    #flex-container {
+      display: flex;
+      width: 100%;
       height: 100%;
-      margin-right: 30px;
+      background-color: black;
+
+      #sidebar {
+        width: 20%;
+        padding: 20px;
+        color: lightgray;
+      }
+
+      #time-series-chart-container {
+        // "flex-grow: 1" will take up remaining space
+        flex-grow: 1;
+        height: 100%;
+        // margin-right: 0;
+        background-color: #282c34;
+      }
     }
   }
 
-  #time-series-chart-container >>> svg {
-    background-color: #282c34;
-  }
+  // #time-series-chart-container >>> svg {
+  //   background-color: #282c34;
+  // }
 
   // Styles for plotted line
   #time-series-chart-container >>> #line-graph .line {
