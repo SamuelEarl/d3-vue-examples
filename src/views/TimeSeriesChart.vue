@@ -45,6 +45,7 @@ export default {
       yAxis: null,
       lineGenerator: null,
       path: null,
+      circles: null,
       formatTime: null,
       maxValue: 100,
       interval: null,
@@ -232,6 +233,21 @@ export default {
         .attr("d", this.lineGenerator);
 
 
+      // Create initial circles
+      this.circles = this.group.selectAll("circle")
+        .data(this.datasetArray, this.key)
+        .enter()
+        .append("circle")
+        .attr("r", 4)
+        .attr("cx", function(d) {
+          return vm.xScale(d.timestamp);
+        })
+        .attr("cy", function(d) {
+          return vm.yScale(d.value);
+        })
+        .attr("class", "circle");
+
+
       // Create axes
       // The axes should be created after the other elements so that, if there is any overlap
       // between the elements, the axes are drawn on top of the other elements.
@@ -294,7 +310,7 @@ export default {
     updateChart() {
       const vm = this;
 
-      // Update x-scale domain to shift the chart to the left
+      // Update x-scale domain to shift the chart to the left. Placing this before the line and circle updates causes the chart to shift to the left and add new data points on the right simultaneously. If you place this after the line and circle updates, then the last data point on the left will be removed first and then the chart will shift, which looks broken.
       // Recalibrate the x-scale domain, given the possible new min and max values in this.datasetArray.
       this.xScale.domain([
         d3.min(this.datasetArray, function(d) {
@@ -304,15 +320,17 @@ export default {
           return d.timestamp;
       })]);
 
-      // Update y-scale domain
-      // Recalibrate the Y-scale domain, given the possible new min and max values in this.datasetArray.
-      this.yScale.domain([
-        d3.min(this.datasetArray, function(d) {
-          return d.value;
-        }),
-        d3.max(this.datasetArray, function(d) {
-          return d.value;
-      })]);
+
+      // I DON'T THINK THIS IS NECESSARY. PLUS, IT APPEARS THAT WHEN I PUT THIS IN, ALL THE Y-VALUES IN THE DATA JUMP UP BY ONE OR TWO. SO THIS IS CAUSING UNNECESSARY BUGS.
+      // // Update y-scale domain
+      // // Recalibrate the Y-scale domain, given the possible new min and max values in this.datasetArray.
+      // this.yScale.domain([
+      //   d3.min(this.datasetArray, function(d) {
+      //     return d.value;
+      //   }),
+      //   d3.max(this.datasetArray, function(d) {
+      //     return d.value;
+      // })]);
 
 
       // Redraw path and shift it left
@@ -322,18 +340,34 @@ export default {
       this.path
         .datum(this.datasetArray, this.key)
         .attr("d", this.lineGenerator);
-        // .attr("transform", null)
-		    // .transition()
-		    // .duration(this.duration)
-		    // .ease(d3.easeLinear)
-		    // .attr("transform", `translate(${this.xScale(this.newTimestamp - 1000 * 64)})`);
 
-// I would like to test these methods to see if they update the chart with less memory usage:
-      // this.path
-      //   .attr("d", this.lineGenerator)
-		  //   .transition()
-		  //   .duration(this.duration)
-      //   .ease(d3.easeLinear);
+
+      // Add a circle
+      this.circles = this.group.selectAll("circle") // Select all circles
+        .data(this.datasetArray, this.key); // Re-bind data to existing circles and return the "update" selection from the data() method. this.circles is now the update selection.
+
+      // Update the circles based on the new datasetArray values.
+      // IMPORTANT NOTE: It is important that you do NOT chain this enter() method to the end of the data() method above.
+      this.circles.enter() // Enter the new circle into the D3 placeholder.
+        .append("circle") // Creates a new circle.
+        .attr("r", 4) // Give each new circle a radius value.
+        .attr("cx", function(d) { // Set the initial x position of the new circle.
+          return vm.xScale(d.timestamp);
+        })
+        .attr("cy", function(d) { // Set the y-value based on the y-scale. (NOTE: The yScale does not get updated when the data points get updated because the y-scale is supposed to be static in this demo.)
+          return vm.yScale(d.value);
+        })
+        .attr("class", "circle") // Make sure that each new circle has a "circle" class.
+        .merge(this.circles) // Merge the enter selection (the new circle) with the update selection (the circles that already exist).
+        .attr("cx", function(d) { // Set the new x position (based on the updated x-scale) for each value in the datasetArray so the data points shift to the left one space.
+          return vm.xScale(d.timestamp);
+        })
+        .attr("cy", function(d) { // Set the y position for each value in the datasetArray.
+          return vm.yScale(d.value);
+        });
+
+      // Remove the left-most circle. If you do not explicitely remove the circles, then they will accumulate on the left side of the chart.
+      this.circles.exit().remove();
 
 
       // Update the axes. For each axis, do the following:
@@ -342,11 +376,8 @@ export default {
       // 3. Set the transition's duration.
       // 4. Call the appropriate axis generator. Make sure that "this.xAxis" equals the original axis definition. I accidentally set "this.xAxis" to the axis that was created and I got errors because of that.
 
-      // Update X-axis
+      // Update x-axis
       this.svg.select(".x.axis")
-        // .transition()
-        // .duration(this.duration)
-        // .ease(d3.easeLinear)
         .call(this.xAxis)
         .selectAll("text")
           .style("text-anchor", "end")
@@ -427,6 +458,13 @@ export default {
   // Styles for plotted line
   #time-series-chart-container >>> #line-graph .line {
     fill: none;
+    stroke: #4d78cc;
+    stroke-width: 2;
+  }
+
+  // Styles for circles on plotted line
+  #time-series-chart-container >>> #line-graph .circle {
+    fill: #282c34;
     stroke: #4d78cc;
     stroke-width: 2;
   }

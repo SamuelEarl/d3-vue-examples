@@ -207,7 +207,7 @@ export default {
           const colorValue = Math.round(d.value * (vm.maxValue / (vm.maxValue * 0.4)));
           return `rgb(0, 0, ${colorValue})`;
         })
-        .merge(this.bars) // Merges the enter selection (the new bar) with the update selection (the other existing bars)
+        .merge(this.bars) // Merges the enter selection (the new bar) with the update selection (the already existing bars)
         .transition() // Initiate a transition on all elements in the update selection (all rects)
         .duration(500)
         .attr("x", function(d, i) { // Set new x position, based on the updated xScale
