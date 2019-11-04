@@ -1,10 +1,10 @@
 <template>
   <div id="bar-chart">
-    <!-- <div id="tooltip" class="hidden">
+    <div id="tooltip" class="hidden">
       <div id="arrow-left"></div>
       <p><strong>Value of Bar</strong></p>
       <p><span id="value">100</span>%</p>
-    </div> -->
+    </div>
     <div id="chart">
       <svg id="svg" :width="w" :height="h"></svg>
     </div>

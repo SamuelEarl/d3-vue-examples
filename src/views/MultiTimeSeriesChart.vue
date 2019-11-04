@@ -7,11 +7,6 @@
       <br /><br />
       <p>Toggle the sidebar to see the chart's responsive design. The chart will redraw itself to fill the space.</p>
     </div>
-    <div id="tooltip" class="hidden">
-      <div id="arrow-left"></div>
-      <p><strong>Value of Bar</strong></p>
-      <p><span id="value">100</span>%</p>
-    </div>
     <div id="flex-container">
       <div id="sidebar" v-if="showSidebar">
         Sidebar
@@ -29,7 +24,7 @@ import Ring from "ringjs";
 import debounce from "lodash.debounce";
 
 export default {
-  name: "TimeSeriesChart",
+  name: "MultiTimeSeriesChart",
   data() {
     return {
       showSidebar: true,
@@ -37,11 +32,26 @@ export default {
       w: 800,
       h: 300,
       group: null,
+      series: {
+        series1: {
+          dataBuffer: null, // This will be a circle buffer
+          dataArray: null,  // This will be a plain array generated from the circle buffer
+          path: null,
+          circles: null,
+          color: "orange"
+        },
+        series2: {
+          dataBuffer: null,
+          dataArray: null,
+          path: null,
+          circles: null,
+          color: "#4d78cc"
+        }
+      },
+      currentTimestamp: null,
       paddingTop: 20, // Create padding around the axes by using these values in the range() methods.
       paddingBottom: 60,
       paddingLeft: 40,
-      datasetBuffer: null, // This will be a circle buffer
-      datasetArray: null, // This will be a plain array generated from the circle buffer
       numDataPoints: 60,
       xScale: null,
       yScale: null,
@@ -49,12 +59,9 @@ export default {
       xAxis: null,
       yAxis: null,
       lineGenerator: null,
-      path: null,
-      circles: null,
       formatTime: null,
       maxValue: 100,
       interval: null,
-      newTimestamp: null,
       duration: 500,
     };
   },
@@ -95,11 +102,13 @@ export default {
       this.setDimensions();
       this.generateSeedData();
       this.createChart();
-      this.createInterval();
+      // this.createInterval();
     },
 
     setDimensions() {
+      // Get the dimensions of the "time-series-chart-container" element.
       const container = document.getElementById("time-series-chart-container").getBoundingClientRect();
+
       // For some reason using an SVG element prevents you from reading the width accurately. I cannot get the width minus the scrollbar width.
       // Container width - scrollbar width = visible width. I need to either find a dynamic way to retrieve an accurate width or I need to hardcode the width of the scrollbar here, if I know it. Right now I have given the "time-series-chart-container" a "margin-right: 30px;". The width of the scrollbar (without customizing the scrollbar) is 15px, so 30px right margin gives some padding on the right side and I have given the "time-series-chart" <div> a background color, so everything looks nice. I think I will keep it like this.
       // UPDATE: Using Flexbox to create flex containers seems to have fixed all of the issues with the SVG spilling out of its container. So I have removed the "margin-right: 30px" from the "time-series-chart-container".
@@ -123,21 +132,38 @@ export default {
     },
 
     generateSeedData() {
-      // Set this.datasetBuffer to a circular buffer.
-      this.datasetBuffer = new Ring(this.numDataPoints);
+      for (let name in this.series) {
+        this.series[name].dataBuffer = new Ring(this.numDataPoints);
 
-      // First timestamp in chart
-      const beginTime = Date.now() - (1000 * this.numDataPoints);
+        // First timestamp in chart
+        const beginTime = Date.now() - (1000 * this.numDataPoints);
 
-      // Push random data to this.datasetBuffer.
-      for (let i = 0; i < this.numDataPoints; i++) {
-        const timestamp = beginTime + (1000 * i);
-        const value = Math.floor(Math.random() * this.maxValue);
-        this.datasetBuffer.push({ key: i, timestamp: timestamp, value: value });
+        // Push random data to this.datasetBuffer(s).
+        for (let i = 0; i < this.numDataPoints; i++) {
+          const timestamp = beginTime + (1000 * i);
+          const value = Math.floor(Math.random() * this.maxValue);
+          this.series[name].dataBuffer.push({ key: i, timestamp: timestamp, value: value });
+        }
+
+        this.series[name].dataArray = this.series[name].dataBuffer.toArray();
       }
 
-      // D3.js has to work with plain arrays, so convert the initial seed data from the dataset buffer to an array.
-      this.datasetArray = this.datasetBuffer.toArray();
+      // // Set this.datasetBuffer to a circular buffer.
+      // this.datasetBuffer1 = new Ring(this.numDataPoints);
+      // this.datasetBuffer2 = new Ring(this.numDataPoints);
+
+      // // First timestamp in chart
+      // const beginTime = Date.now() - (1000 * this.numDataPoints);
+
+      // // Push random data to this.datasetBuffer(s).
+      // for (let i = 0; i < this.numDataPoints; i++) {
+      //   const timestamp = beginTime + (1000 * i);
+      //   const value = Math.floor(Math.random() * this.maxValue);
+      //   this.datasetBuffer2.push({ key: i, timestamp: timestamp, value: value });
+      // }
+
+      // // D3.js has to work with plain arrays, so convert the initial seed data from the dataset buffer to an array.
+      // this.datasetArray = this.datasetBuffer.toArray();
     },
 
     createChart() {
@@ -148,10 +174,10 @@ export default {
       // Create scale functions
       this.xScale = d3.scaleTime()
         .domain([
-          d3.min(this.datasetArray, function(d) {
+          d3.min(this.series.series1.dataArray, function(d) {
             return d.timestamp;
           }),
-          d3.max(this.datasetArray, function(d) {
+          d3.max(this.series.series1.dataArray, function(d) {
             return d.timestamp;
           })
         ])
@@ -234,30 +260,41 @@ export default {
 
       // Append group element
       this.group = this.svg.append("g")
+        // Give it an id of "line-graph"
         .attr("id", "line-graph")
+        // ...and define a clipping path for the group
         .attr("clip-path", "url(#chart-area");
 
 
-      // Append path / create line
-      this.path = this.group.append("path")
-        .datum(this.datasetArray, this.key)
-        .attr("class", "line")
-        .attr("d", this.lineGenerator);
+      // Append paths / create lines
+      for (let name in this.series) {
+        // Append a path to the group element
+        this.series[name].path = this.group.append("path")
+          .datum(this.series[name].dataArray, this.key)
+          .attr("class", name + " line")
+          .style("stroke", this.series[name].color);
+      }
+
+      // // Append path / create line
+      // this.path = this.group.append("path")
+      //   .datum(this.datasetArray, this.key)
+      //   .attr("class", "line")
+      //   .attr("d", this.lineGenerator);
 
 
-      // Create initial circles
-      this.circles = this.group.selectAll("circle")
-        .data(this.datasetArray, this.key)
-        .enter()
-        .append("circle")
-        .attr("r", 4)
-        .attr("cx", function(d) {
-          return vm.xScale(d.timestamp);
-        })
-        .attr("cy", function(d) {
-          return vm.yScale(d.value);
-        })
-        .attr("class", "circle");
+      // // Create initial circles
+      // this.circles = this.group.selectAll("circle")
+      //   .data(this.datasetArray, this.key)
+      //   .enter()
+      //   .append("circle")
+      //   .attr("r", 4)
+      //   .attr("cx", function(d) {
+      //     return vm.xScale(d.timestamp);
+      //   })
+      //   .attr("cy", function(d) {
+      //     return vm.yScale(d.value);
+      //   })
+      //   .attr("class", "circle");
 
 
       // Create axes
@@ -284,33 +321,40 @@ export default {
       // -----------------------------------
       // Beginning of create new data point
       // -----------------------------------
-      // Convert this.datasetBuffer to an array so you can access the elements in the circle buffer.
-      const lastTimestamp = this.datasetArray[this.datasetArray.length - 1].timestamp;
-      this.newTimestamp = lastTimestamp + 1000;
+      // You have to use dataArray (as opposed to dataBuffer) in order to work with the elements that are stored in the circle buffer.
+      // To create a new timestamp, we will just use the dataArray from the first series in the object.
+      const dataArray1 = this.series.series1.dataArray;
+      const lastTimestamp = dataArray1[dataArray1.length - 1].timestamp;
+      this.currentTimestamp = lastTimestamp + 1000;
 
-      const newValue = Math.floor(Math.random() * this.maxValue);
-      // Make sure to give each new data object that is added to the array a key value that is one
-      // higher than the key value of the last data object in the array.
-      let dataObj;
-      let key;
-      // If there is a least one data object in the dataset array, then...
-      if (this.datasetArray.length > 0) {
-        // Select the last data object in the array
-        dataObj = this.datasetArray[this.datasetArray.length - 1];
-        // Assign "key" to be one number higher than the key value of the last data object in the array.
-        key = dataObj.key + 1;
+      for (let name in this.series) {
+        const dataArray = this.series[name].dataArray;
+        const dataBuffer = this.series[name].dataBuffer;
+
+        const newValue = Math.floor(Math.random() * this.maxValue);
+        // Make sure to give each new data object that is added to the array a key value that is one
+        // higher than the key value of the last data object in the array.
+        let dataObj;
+        let key;
+        // If there is a least one data object in the dataset array, then...
+        if (dataArray.length > 0) {
+          // Select the last data object in the array
+          dataObj = dataArray[dataArray.length - 1];
+          // Assign "key" to be one number higher than the key value of the last data object in the array.
+          key = dataObj.key + 1;
+        }
+        // If the dataset array is empty, then...
+        else {
+          // Assign "key" the value of 0.
+          key = 0;
+        }
+
+        // Push the new data point object to the series' dataBuffer.
+        dataBuffer.push({ key: key, timestamp: this.currentTimestamp, value: newValue });
+
+        // Set the dataArray to equal the updated circle buffer.
+        dataArray = dataBuffer.toArray();
       }
-      // If the dataset array is empty, then...
-      else {
-        // Assign "key" the value of 0.
-        key = 0;
-      }
-
-      // Push the new data point object to this.datasetBuffer
-      this.datasetBuffer.push({ key: key, timestamp: this.newTimestamp, value: newValue });
-
-      // Set this.datasetArray to equal the updated circle buffer
-      this.datasetArray = this.datasetBuffer.toArray();
       // -----------------------------
       // End of create new data point
       // -----------------------------
@@ -325,10 +369,10 @@ export default {
       // Update x-scale domain to shift the chart to the left. Placing this before the line and circle updates causes the chart to shift to the left and add new data points on the right simultaneously. If you place this after the line and circle updates, then the last data point on the left will be removed first and then the chart will shift, which looks broken.
       // Recalibrate the x-scale domain, given the possible new min and max values in this.datasetArray.
       this.xScale.domain([
-        d3.min(this.datasetArray, function(d) {
+        d3.min(this.series.series1.dataArray, function(d) {
           return d.timestamp;
         }),
-        d3.max(this.datasetArray, function(d) {
+        d3.max(this.series.series1.dataArray, function(d) {
           return d.timestamp;
       })]);
 
@@ -349,37 +393,43 @@ export default {
       // To get the data to transition smoothly, I referenced the code from this chart and modified it:
       // http://bl.ocks.org/denisemauldin/ceb7065687c125223339a26a47d58a28
       // Also, this one might be helpful: https://jsfiddle.net/peDzT/
-      this.path
-        .datum(this.datasetArray, this.key)
-        .attr("d", this.lineGenerator);
+      for (let name in this.series) {
+        this.series[name].path
+          .datum(this.series[name].dataArray, this.key)
+          .attr("d", this.lineGenerator);
+      }
+
+      // this.path
+      //   .datum(this.datasetArray, this.key)
+      //   .attr("d", this.lineGenerator);
 
 
-      // Add a circle
-      this.circles = this.group.selectAll("circle") // Select all circles
-        .data(this.datasetArray, this.key); // Re-bind data to existing circles and return the "update" selection from the data() method. this.circles is now the update selection.
+      // // Add a circle
+      // this.circles = this.group.selectAll("circle") // Select all circles
+      //   .data(this.datasetArray, this.key); // Re-bind data to existing circles and return the "update" selection from the data() method. this.circles is now the update selection.
 
-      // Update the circles based on the new datasetArray values.
-      // IMPORTANT NOTE: It is important that you do NOT chain this enter() method to the end of the data() method above.
-      this.circles.enter() // Enter the new circle into the D3 placeholder.
-        .append("circle") // Creates a new circle.
-        .attr("r", 4) // Give each new circle a radius value.
-        .attr("cx", function(d) { // Set the initial x position of the new circle.
-          return vm.xScale(d.timestamp);
-        })
-        .attr("cy", function(d) { // Set the y-value based on the y-scale. (NOTE: The yScale does not get updated when the data points get updated because the y-scale is supposed to be static in this demo.)
-          return vm.yScale(d.value);
-        })
-        .attr("class", "circle") // Make sure that each new circle has a "circle" class.
-        .merge(this.circles) // Merge the enter selection (the new circle) with the update selection (the circles that already exist).
-        .attr("cx", function(d) { // Set the new x position (based on the updated x-scale) for each value in the datasetArray so the data points shift to the left one space.
-          return vm.xScale(d.timestamp);
-        })
-        .attr("cy", function(d) { // Set the y position for each value in the datasetArray.
-          return vm.yScale(d.value);
-        });
+      // // Update the circles based on the new datasetArray values.
+      // // IMPORTANT NOTE: It is important that you do NOT chain this enter() method to the end of the data() method above.
+      // this.circles.enter() // Enter the new circle into the D3 placeholder.
+      //   .append("circle") // Creates a new circle.
+      //   .attr("r", 4) // Give each new circle a radius value.
+      //   .attr("cx", function(d) { // Set the initial x position of the new circle.
+      //     return vm.xScale(d.timestamp);
+      //   })
+      //   .attr("cy", function(d) { // Set the y-value based on the y-scale. (NOTE: The yScale does not get updated when the data points get updated because the y-scale is supposed to be static in this demo.)
+      //     return vm.yScale(d.value);
+      //   })
+      //   .attr("class", "circle") // Make sure that each new circle has a "circle" class.
+      //   .merge(this.circles) // Merge the enter selection (the new circle) with the update selection (the circles that already exist).
+      //   .attr("cx", function(d) { // Set the new x position (based on the updated x-scale) for each value in the datasetArray so the data points shift to the left one space.
+      //     return vm.xScale(d.timestamp);
+      //   })
+      //   .attr("cy", function(d) { // Set the y position for each value in the datasetArray.
+      //     return vm.yScale(d.value);
+      //   });
 
-      // Remove the left-most circle. If you do not explicitely remove the circles, then they will accumulate on the left side of the chart.
-      this.circles.exit().remove();
+      // // Remove the left-most circle. If you do not explicitely remove the circles, then they will accumulate on the left side of the chart.
+      // this.circles.exit().remove();
 
 
       // Update the axes. For each axis, do the following:
@@ -409,14 +459,8 @@ export default {
 
     destroyChart() {
       // Destroy SVG elements (i.e., remove the SVG element).
-      const chartContainer = document.getElementById("time-series-chart-container");
-      // If the chart container element exists, then...
-      if (chartContainer) {
-        // ...remove all child elements from it. (https://developer.mozilla.org/en-US/docs/Web/API/Node/removeChild)
-        while (chartContainer.firstChild) {
-          chartContainer.removeChild(chartContainer.firstChild);
-        }
-      }
+      const containerElement = document.getElementById("time-series-chart-container");
+      containerElement.removeChild(containerElement.childNodes[0]);
 
       // Destroy interval.
       clearInterval(this.interval);
@@ -432,8 +476,7 @@ export default {
 
 <style lang="stylus" scoped>
   #time-series-chart {
-    // height = 100vh - nav_header - btn_bar
-    height: calc(100vh - 78px - 58px);
+    height: calc(50vh);
 
     #btn-bar {
       margin-bottom: 20px;
@@ -474,9 +517,9 @@ export default {
   // }
 
   // Styles for plotted line
-  #time-series-chart-container >>> #line-graph .line {
+  #time-series-chart-container >>> .line {
     fill: none;
-    stroke: #4d78cc;
+    // stroke: #4d78cc;
     stroke-width: 2;
   }
 

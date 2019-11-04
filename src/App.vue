@@ -9,6 +9,7 @@
       <router-link to="/scatterplot">Scatterplot</router-link>
       <router-link to="/line-chart">Line Chart</router-link>
       <router-link to="/time-series-chart">Time Series Chart</router-link>
+      <router-link to="/multi-time-series-chart">Multi Time Series Chart</router-link>
       <router-link to="/area-chart">Area Chart</router-link>
     </nav>
     <router-view/>

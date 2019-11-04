@@ -49,6 +49,11 @@ export default new Router({
       component: () => import(/* webpackChunkName: "timeSeriesChart" */ "./views/TimeSeriesChart.vue")
     },
     {
+      path: "/multi-time-series-chart",
+      name: "multi-time-series-chart",
+      component: () => import(/* webpackChunkName: "multiTimeSeriesChart" */ "./views/MultiTimeSeriesChart.vue")
+    },
+    {
       path: "/area-chart",
       name: "area-chart",
       component: () => import(/* webpackChunkName: "areaChart" */ "./views/AreaChart.vue")
