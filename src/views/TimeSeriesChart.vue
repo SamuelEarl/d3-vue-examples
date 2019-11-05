@@ -9,7 +9,7 @@
     </div>
     <div id="tooltip" class="hidden">
       <div id="arrow-left"></div>
-      <p><strong>Value of Bar</strong></p>
+      <p><strong>Value:</strong></p>
       <p><span id="value">100</span>%</p>
     </div>
     <div id="flex-container">
@@ -218,7 +218,8 @@ export default {
       this.svg = d3.select("#time-series-chart-container")
         .append("svg")
         .attr("width", this.w)
-        .attr("height", this.h);
+        .attr("height", this.h)
+        .attr("id", "svg");
 
 
       // Define clipping path
@@ -257,7 +258,39 @@ export default {
         .attr("cy", function(d) {
           return vm.yScale(d.value);
         })
-        .attr("class", "circle");
+        .attr("class", "circle")
+        // On hover, expand the circle radius and create tooltip
+        .on("mouseover", function(d) {
+          // Expand the circle's radius
+          d3.select(this).attr("r", 10);
+
+          // We first need to get the x-position of the left edge of the SVG element and then we can
+          // calculate the x-position of the bars from the left edge of the SVG element.
+          const svgEl = document.getElementById("svg");
+          const svgLeftEdge = svgEl.getBoundingClientRect().left;
+          const svgTopEdge = svgEl.getBoundingClientRect().top;
+          // Get "this" circle's cx/cy values, then use those to set the tooltip position.
+          const xPosition = parseFloat(d3.select(this).attr("cx")) + svgLeftEdge;
+          const yPosition = parseFloat(d3.select(this).attr("cy")) + svgTopEdge;
+
+					// Update the tooltip position and value
+          d3.select("#tooltip")
+            // The Tooltip's width is set in the CSS.
+            // Position the tooltip's left border to the circle's xPosition - half of the tooltip's width.
+						.style("left", xPosition - 50 + "px")
+						.style("top", yPosition - 45 + "px")
+						.select("#value")
+						.text(d.value);
+
+					// Show the tooltip
+          d3.select("#tooltip").classed("hidden", false);
+        })
+        .on("mouseout", function() {
+          // Set the circle's radius back to normal.
+          d3.select(this).attr("r", 4);
+          // Hide the tooltip
+          d3.select("#tooltip").classed("hidden", true);
+        });
 
 
       // Create axes
@@ -376,6 +409,38 @@ export default {
         })
         .attr("cy", function(d) { // Set the y position for each value in the datasetArray.
           return vm.yScale(d.value);
+        })
+        // On hover, expand the circle radius and create tooltip
+        .on("mouseover", function(d) {
+          // Expand the circle's radius
+          d3.select(this).attr("r", 10);
+
+          // We first need to get the x-position of the left edge of the SVG element and then we can
+          // calculate the x-position of the bars from the left edge of the SVG element.
+          const svgEl = document.getElementById("svg");
+          const svgLeftEdge = svgEl.getBoundingClientRect().left;
+          const svgTopEdge = svgEl.getBoundingClientRect().top;
+          // Get "this" circle's cx/cy values, then use those to set the tooltip position.
+          const xPosition = parseFloat(d3.select(this).attr("cx")) + svgLeftEdge;
+          const yPosition = parseFloat(d3.select(this).attr("cy")) + svgTopEdge;
+
+					// Update the tooltip position and value
+          d3.select("#tooltip")
+            // The Tooltip's width is set in the CSS.
+            // Position the tooltip's left border to the circle's xPosition - half of the tooltip's width.
+						.style("left", xPosition - 50 + "px")
+						.style("top", yPosition - 45 + "px")
+						.select("#value")
+						.text(d.value);
+
+					// Show the tooltip
+					d3.select("#tooltip").classed("hidden", false);
+        })
+        .on("mouseout", function() {
+          // Set the circle's radius back to normal.
+          d3.select(this).attr("r", 4);
+          // Hide the tooltip
+          d3.select("#tooltip").classed("hidden", true);
         });
 
       // Remove the left-most circle. If you do not explicitely remove the circles, then they will accumulate on the left side of the chart.
@@ -444,6 +509,47 @@ export default {
         color: #bbb;
         border: none;
         outline: none;
+      }
+    }
+
+    #tooltip {
+      position: absolute;
+      width: 100px;
+      height: auto;
+      padding: 10px;
+      background-color: #111;
+      color: lighten(#818a9d, 20%);
+      border-radius: 5px;
+      // Don't use a box-shadow property because I don't think there is a way to sytle the tooltip arrow with a box-shadow.
+      // box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+      // "pointer-events: none" ensures that mousing over the tooltip itself won’t trigger a mouseout
+      // event on the bars, thereby hiding the tooltip.
+      // pointer-events: none;
+
+      // Tooltip Arrow
+      // https://css-tricks.com/snippets/css/css-triangle/
+      // https://www.w3schools.com/css/css_tooltip.asp
+      &:after {
+        content: " ";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -7px; // margin-top should be the same as the border width
+        border-top: 7px solid #111;
+        border-right: 7px solid transparent;
+        border-bottom: 7px solid transparent;
+        border-left: 7px solid transparent;
+      }
+
+      &.hidden {
+        display: none;
+      }
+
+      p {
+        margin: 0;
+        font-family: sans-serif;
+        font-size: 16px;
+        line-height: 20px;
       }
     }
 
