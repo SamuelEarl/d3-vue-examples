@@ -1,12 +1,6 @@
 <template>
   <div>
-    <div id="body">
-      <svg id="svg" :width="w" :height="h"></svg>
-    </div>
-    <br />
-    <button id="click-this" @click="update">
-      Click To Generate Random Data
-    </button>
+    <div id="chart-container"></div>
   </div>
 </template>
 
@@ -15,278 +9,124 @@ import * as d3 from "d3";
 
 export default {
   name: "Scatterplot",
+
   data() {
     return {
-      svg: null,
       dataset: [
-        // [5, 20],
-        // [480, 90],
-        // [250, 50],
-        // [100, 33],
-        // [330, 95],
-        // [410, 12],
-        // [475, 44],
-        // [25, 67],
-        // [85, 21],
-        // [220, 88],
-        // [600, 150]
+        [5, 20],
+        [480, 90],
+        [250, 50],
+        [100, 33],
+        [330, 95],
+        [410, 12],
+        [475, 44],
+        [25, 67],
+        [85, 21],
+        [220, 88],
+        [600, 150]
       ],
-      numDataPoints: 50,
-      maxValueInDataset: 100,
-      w: 500,
-      h: 300,
+      margin: {
+        top: 20,
+        right: 40,
+        bottom: 20,
+        left: 20
+      },
+      svgWidth: 800,
+      svgHeight: 500,
+      baseGroup: null,
+      labels: null,
+      // Scale function variables
       xScale: null,
       yScale: null,
-      aScale: null,
-      xAxis: null,
-      padding: 30,
-      generateColorValue: null,
+      rScale: null, // The scale used to calculate the radius of the circles
     };
   },
 
-  watch: {
-    // watchers
+  computed: {
+    baseGroupWidth() {
+      return this.svgWidth - this.margin.left - this.margin.right;
+    },
+    baseGroupHeight() {
+      return this.svgHeight - this.margin.top - this.margin.bottom;
+    }
   },
 
   mounted() {
-    this.renderCharts()
+    this.createChart();
   },
 
   methods: {
-    generateRandomData() {
-      this.dataset = [];
-
-      for (let i = 0; i < this.numDataPoints; i++) {
-        const randomNum1 = Math.floor(Math.random() * this.maxValueInDataset);
-        const randomNum2 = Math.floor(Math.random() * this.maxValueInDataset);
-        const randomNum3 = Math.floor(Math.random() * this.maxValueInDataset);
-        this.dataset.push([ randomNum1, randomNum2, randomNum3 ]);
-      }
-    },
-
-    renderCharts() {
+    createChart() {
       const vm = this;
 
-      this.generateRandomData();
-
-      // Define scale functions
+      // Create scale functions
       this.xScale = d3.scaleLinear()
+        // d3.max() loops through each item in the "dataset" array. If I provide an "accessor
+        // function," I can get d3.max() to loop through only the first elements of each item in the
+        // "dataset" array and return the number with the greatest value.
         .domain([0, d3.max(this.dataset, function(d) {
           return d[0];
         })])
-        .range([this.padding, this.w - this.padding * 2.5]);
+        .range([0, this.baseGroupWidth]);
 
       this.yScale = d3.scaleLinear()
         .domain([0, d3.max(this.dataset, function(d) {
           return d[1];
         })])
-        .range([this.h - this.padding, this.padding]);
+        .range([this.baseGroupHeight, 0]);
 
-      this.aScale = d3.scaleSqrt()
+      this.rScale = d3.scaleSqrt()
         .domain([0, d3.max(this.dataset, function(d) {
-          return d[2];
+          return d[1];
         })])
-        // The range produces the output values.
-        // The circle areas should be between 0 and 5% of the height of the chart so that all the
-        // circles can fit into the chart.
-        .range([0, this.h * .05]);
+        .range([0, 20]);
 
-      // Define X-axis
-      this.xAxis = d3.axisBottom()
-        .scale(this.xScale)
-        .ticks(5);
+      // Append the SVG and base group elements using the margin convention
+      // https://bl.ocks.org/mbostock/3019563
+      this.baseGroup = d3.select("#chart-container")
+        .append("svg")
+          .attr("width", this.baseGroupWidth + this.margin.left + this.margin.right)
+          .attr("height", this.baseGroupHeight + this.margin.top + this.margin.bottom)
+        .append("g")
+          .attr("transform", `translate(${this.margin.left}, ${this.margin.top})`);
 
-      // Define Y-axis
-      this.yAxis = d3.axisLeft()
-        .scale(this.yScale)
-        .ticks(5);
-
-      // Define generateColorValue function
-      this.generateColorValue = function(areaInputVal) {
-        const areaOutputVal = this.aScale(areaInputVal);
-        const maxAreaOutputVal = this.aScale(vm.maxValueInDataset);
-
-        let colorVal;
-        // If the circle area is 0% to 24.9% of the max possible circle area,
-        // then colorVal will be the darkest circles.
-        if (areaOutputVal >= 0) {
-          colorVal = 64;
-        }
-        // If the circle area is 25% to 49.9% of the max possible circle area,
-        // then colorVal will be medium dark circles.
-        if (areaOutputVal >= maxAreaOutputVal * .25) {
-          colorVal = 128;
-        }
-        // If the circle area is 50% to 74.9% of the max possible circle area,
-        // then colorVal will be medium light circles.
-        if (areaOutputVal >= maxAreaOutputVal * .50) {
-          colorVal = 192;
-        }
-        // If the circle area is 75% to 100% of the max possible circle area,
-        // then colorVal will be the lightest circles.
-        if (areaOutputVal >= maxAreaOutputVal * .75) {
-          colorVal = 255;
-        }
-        return `rgb(${colorVal}, 0, ${colorVal})`;
-      };
-
-
-      // Create SVG element
-      this.svg = d3.select("#svg");
-        // .append("svg")
-        // .attr("width", this.w)
-        // .attr("height", this.h);
-
-
-      // Define clipping path
-      this.svg.append("clipPath")
-        .attr("id", "chart-area")
-        .append("rect")
-        .attr("x", this.padding)
-        .attr("y", this.padding)
-        .attr("width", this.w - this.padding * 3)
-        .attr("height", this.h - this.padding * 2);
-
-
-      // Create circles (and call scale functions)
-      this.svg.append("g") // Append a "g" element to the SVG
-        .attr("id", "circles") // Give the "g" element an ID of "circles"
-        .attr("clip-path", "url(#chart-area)") // Give the "g" element a reference to the clipPath
-        .selectAll("circle") // Select the elements that you want to create in the SVG
+      // Create circles
+      this.baseGroup.selectAll("circle")
         .data(this.dataset)
         .enter()
         .append("circle")
-        // When you call "xScale()" and pass it a value, the xScale function will look for that value in its set of domain values (i.e., in its set of input values) and return the corresponding range value (i.e., the output value). The range value that is returned is used to set the X or Y-value of the shape that is being appended. In this case, the range value that is returned is used to set the "cx" value of the circle that is being appended in the current iteration of the ".data(this.dataset)" function.
         .attr("cx", function(d) {
           return vm.xScale(d[0]);
         })
         .attr("cy", function(d) {
           return vm.yScale(d[1]);
         })
-        // Scatterplots are able to chart 3 values in one plot: (1) the x-value, (2) the y-value, and (3) an area value for each circle that represents amount or something similar.
-        // As a general rule, when creating visualizations that use circles to plot values, make sure that those circles are created with an area calculation (A = PI * r^2) instead of the circle's radius value.
         .attr("r", function(d) {
-          return vm.aScale(d[2]);
-        })
-        .attr("fill", function(d) {
-          return vm.generateColorValue(d[2]);
+          return vm.rScale(d[1]);
         });
 
-      // // Create labels and call scale functions
-      // this.svg.selectAll("text")
-      //   .data(this.dataset)
-      //   .enter()
-      //   .append("text")
-      //   .text(function(d) {
-      //     return d[0] + ", " + d[1];
-      //   })
-      //   .attr("x", function(d, i) {
-      //     return vm.xScale(d[0]);
-      //   })
-      //   .attr("y", function(d) {
-      //     return vm.yScale(d[1]);
-      //   })
-      //   .attr("font-family", "sans-serif")
-      //   .attr("font-size", "11px")
-      //   .attr("fill", "red");
-
-      // Create X-axis
-      this.svg.append("g")
-        .attr("class", "x axis")
-        .attr("transform", `translate(0, ${this.h - this.padding})`)
-        .call(this.xAxis);
-
-      // Create Y-axis
-      this.svg.append("g")
-        .attr("class", "y axis")
-        .attr("transform", `translate(${this.padding}, 0)`)
-        .call(this.yAxis);
-    },
-
-    update() {
-      const vm = this;
-
-      this.generateRandomData();
-
-      // Update scale domains
-      this.xScale.domain([0, d3.max(this.dataset, function(d) {
-        return d[0];
-      })]);
-      this.yScale.domain([0, d3.max(this.dataset, function(d) {
-        return d[1];
-      })]);
-
-      // Update all circles
-      this.svg.selectAll("circle")
+      // Create labels
+      this.baseGroup.selectAll("text")
         .data(this.dataset)
-        .transition()
-        .duration(1000)
-        .on("start", function() {
-          d3.select(this)
-            .attr("fill", "black")
+        .enter()
+        .append("text")
+        .text(function(d) {
+          return `${d[0]}, ${d[1]}`;
         })
-        .attr("cx", function(d) {
+        .attr("x", function(d) {
           return vm.xScale(d[0]);
         })
-        .attr("cy", function(d) {
+        .attr("y", function(d) {
           return vm.yScale(d[1]);
         })
-        .transition()
-        .duration(500)
-        .attr("r", function(d) {
-          return vm.aScale(d[2]);
-        })
-        .attr("fill", function(d) {
-          return vm.generateColorValue(d[2]);
-        });
-
-      // Update the axes. For each axis, do the following:
-      // 1. Select the axis.
-      // 2. Initiate a transition.
-      // 3. Set the transition's duration.
-      // 4. Call the appropriate axis generator.
-
-      // Update X-axis
-      this.svg.select(".x.axis")
-        .transition()
-        .duration(1000)
-        .call(this.xAxis);
-
-      // Update Y-axis
-      this.svg.select(".y.axis")
-        .transition()
-        .duration(1000)
-        .call(this.yAxis);
-    }
-  }
+        .attr("font-family", "sans-serif")
+        .attr("font-size", "11px")
+        .attr("fill", "red");
+    },
+  },
 };
 </script>
 
 <style lang="stylus" scoped>
-  // Deep selector styles (>>>) for dynamically generated SVG elements:
-  #svg >>> path, line {
-    // stroke: blue;
-    shape-rendering: crispEdges;
-  }
 
-  #svg >>> text {
-    font-family: Optima, Futura, sans-serif;
-    font-weight: bold;
-    font-size: 12px;
-    // fill: teal;
-  }
-
-  #click-this {
-    padding: 8px 10px;
-    border: 2px solid palevioletred;
-    font-size: 16px;
-    background-color: transparent;
-    color: darken(palevioletred, 20%);
-    box-shadow: 2px 2px 2px palevioletred;
-    cursor: pointer;
-    outline: none;
-    &:hover {
-      box-shadow: none;
-    }
-  }
 </style>

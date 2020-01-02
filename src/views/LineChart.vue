@@ -42,7 +42,8 @@ export default {
 
       // If you try to import a CSV file like you would another module, then you will get errors.
       // See "Problem loading data with D3.js in Vue.js":
-      // https://forum.vuejs.org/t/problem-loading-data-with-d3-js-in-vue-js/39360
+      // https://forum.vuejs.org/t/problem-loading-data-with-d3-js-in-vue-js/39360.
+      // So put your data files in the "public" folder and reference them from there.
       const dataFile = "/data/mauna_loa_co2_monthly_averages.csv";
 
       // Read in data

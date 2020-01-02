@@ -278,7 +278,7 @@ export default {
             // The Tooltip's width is set in the CSS.
             // Position the tooltip's left border to the circle's xPosition - half of the tooltip's width.
 						.style("left", xPosition - 50 + "px")
-						.style("top", yPosition - 45 + "px")
+						.style("top", yPosition - 80 + "px")
 						.select("#value")
 						.text(d.value);
 
@@ -429,7 +429,7 @@ export default {
             // The Tooltip's width is set in the CSS.
             // Position the tooltip's left border to the circle's xPosition - half of the tooltip's width.
 						.style("left", xPosition - 50 + "px")
-						.style("top", yPosition - 45 + "px")
+						.style("top", yPosition - 80 + "px")
 						.select("#value")
 						.text(d.value);
 
@@ -582,15 +582,15 @@ export default {
   // Styles for plotted line
   #time-series-chart-container >>> #line-graph .line {
     fill: none;
-    stroke: #4d78cc;
-    stroke-width: 2;
+    stroke: #36b5d8;
+    stroke-width: 3;
   }
 
   // Styles for circles on plotted line
   #time-series-chart-container >>> #line-graph .circle {
     fill: #282c34;
-    stroke: #4d78cc;
-    stroke-width: 2;
+    stroke: #36b5d8;
+    stroke-width: 1;
   }
 
   // Styles for axes lines (.axis path) and tick marks (.axis .tick line),

@@ -42,15 +42,13 @@ export default {
 
       // If you try to import a CSV file like you would another module, then you will get errors.
       // See "Problem loading data with D3.js in Vue.js":
-      // https://forum.vuejs.org/t/problem-loading-data-with-d3-js-in-vue-js/39360
+      // https://forum.vuejs.org/t/problem-loading-data-with-d3-js-in-vue-js/39360.
+      // So put your data files in the "public" folder and reference them from there.
       const dataFile = "/data/mauna_loa_co2_monthly_averages.csv";
 
       // Read in data
       // NOTE: The API for d3.csv has changed in D3 v5. It now uses Promises.
       // Read about it here: http://learnjsdata.com/read_data.html.
-
-// I HAD THIS WORKING ON FRIDAY. CAME BACK MONDAY AND IT WOULD NOT WORK. IT LOOKS LIKE THERE IS SOME ERROR IN THE d3.csv and d3.json FUNCTIONS. FOR SOME REASON THEY ARE NOT READING DATA. THEY ONLY RETURN AN ERROR (SPECIFICALLY, THEY RETURN index.html).
-// I AM GOING TO STOP MESSING AROUND WITH THIS AND MOVE ON WITH MY LIFE. THIS IS VERY INFURIATING!!!
       const data = await d3.csv(dataFile);
 
       data.forEach(function(d) {

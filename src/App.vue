@@ -7,6 +7,7 @@
       <router-link to="/bar-chart">Bar Chart</router-link>
       <router-link to="/add-remove-bars">Add/Remove Bars</router-link>
       <router-link to="/scatterplot">Scatterplot</router-link>
+      <router-link to="/bubble-chart">Bubble Chart</router-link>
       <router-link to="/line-chart">Line Chart</router-link>
       <router-link to="/time-series-chart">Time Series Chart</router-link>
       <router-link to="/multi-time-series-chart">Multi Time Series Chart</router-link>

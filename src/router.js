@@ -39,6 +39,11 @@ export default new Router({
       component: () => import(/* webpackChunkName: "scatterplot" */ "./views/Scatterplot.vue")
     },
     {
+      path: "/bubble-chart",
+      name: "bubble-chart",
+      component: () => import(/* webpackChunkName: "bubbleChart" */ "./views/BubbleChart.vue")
+    },
+    {
       path: "/line-chart",
       name: "line-chart",
       component: () => import(/* webpackChunkName: "lineChart" */ "./views/LineChart.vue")
