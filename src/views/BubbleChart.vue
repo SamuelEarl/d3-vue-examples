@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div id="bubble-chart">
     <table id="tooltip" class="hidden">
       <thead>
         <tr>
@@ -71,30 +71,22 @@ export default {
         ["Walmart Inc", 521.09, 14.94, 337.12, "services"]
       ],
       margin: {
-        top: 20,
+        top: 40,
         right: 20,
         bottom: 20,
         left: 20
       },
-      baseSvgWidth: 800,
-      baseSvgHeight: 500,
+      svgWidth: 800,
+      svgHeight: 500,
       baseSvg: null,
-      baseGroup: null,
       labels: null,
-      // Scale function variables
+      // Scale and axis variables
       xScale: null,
       yScale: null,
       rScale: null,
+      xAxis: null,
+      yAxis: null,
     };
-  },
-
-  computed: {
-    baseGroupWidth() {
-      return this.baseSvgWidth - this.margin.left - this.margin.right;
-    },
-    baseGroupHeight() {
-      return this.baseSvgHeight - this.margin.top - this.margin.bottom;
-    }
   },
 
   mounted() {
@@ -112,13 +104,13 @@ export default {
           return d[1];
         })])
         // Then take that percentile and pass it to the range() method and calculate the value that corresponds with that percentile and return that value.
-        .range([0, this.baseGroupWidth]);
+        .range([this.margin.left, this.svgWidth - this.margin.right]);
 
       this.yScale = d3.scaleLinear()
         .domain([0, d3.max(this.dataset, function(d) {
           return d[2];
         })])
-        .range([this.baseGroupHeight, 0]);
+        .range([this.svgHeight - this.margin.bottom, this.margin.top]);
 
       this.rScale = d3.scaleSqrt()
         .domain([0, d3.max(this.dataset, function(d) {
@@ -126,18 +118,20 @@ export default {
         })])
         .range([0, 30]);
 
-      // Append the SVG and base group elements using the margin convention
-      // https://bl.ocks.org/mbostock/3019563
+      // Define the x-axis.
+      this.xAxis = d3.axisBottom().scale(this.xScale);
+
+      // Define the y-axis
+      this.yAxis = d3.axisLeft().scale(this.yScale);
+
+      // Create the baseSvg element
       this.baseSvg = d3.select("#chart-container")
         .append("svg")
-          .attr("width", this.baseGroupWidth + this.margin.left + this.margin.right)
-          .attr("height", this.baseGroupHeight + this.margin.top + this.margin.bottom);
+          .attr("width", this.svgWidth)
+          .attr("height", this.svgHeight)
+          .attr("id", "svg");
 
-      this.baseGroup = this.baseSvg.append("g")
-          .attr("transform", `translate(${this.margin.left}, ${this.margin.top})`)
-          .attr("id", "base-group");
-
-      this.baseGroup.selectAll("circle")
+      this.baseSvg.selectAll("circle")
         .data(this.dataset)
         .enter()
         .append("circle")
@@ -154,7 +148,13 @@ export default {
         .attr("class", function(d) {
           return d[4];
         })
+        .attr("id", function(d, i) {
+          return `company-${i}`;
+        })
         .on("mouseover", function(d) {
+          const highlightedCircle = d3.select(`#${this.id}`);
+          highlightedCircle.classed("highlighted", true);
+
           const tooltip = d3.select("#tooltip");
           tooltip.classed("hidden", false);
 
@@ -165,49 +165,52 @@ export default {
 
           // Show the tooltip.
           // On hover, create the tooltip.
-          // We first need to get the x-position of the left edge of the baseGroup element and then we can
-          // calculate the x-position of the circles from the left edge of the baseGroup element.
-          const baseGroup = document.getElementById("base-group");
-          const baseGroupLeftEdge = baseGroup.getBoundingClientRect().left;
-          const baseGroupTopEdge = baseGroup.getBoundingClientRect().top;
+          // We first need to get the x-position of the left edge of the svgEl element and then we can
+          // calculate the x-position of the circles from the left edge of the svgEl element.
+          const svgEl = document.getElementById("svg");
+          const svgElLeftEdge = svgEl.getBoundingClientRect().left;
+          const svgElTopEdge = svgEl.getBoundingClientRect().top;
           // Get "this" circle's cx/cy values, then use those to set the tooltip position.
-          const xPosition = parseFloat(d3.select(this).attr("cx")) + baseGroupLeftEdge;
-          const yPosition = parseFloat(d3.select(this).attr("cy")) + baseGroupTopEdge;
+          const xPosition = parseFloat(d3.select(this).attr("cx")) + svgElLeftEdge;
+          const yPosition = parseFloat(d3.select(this).attr("cy")) + svgElTopEdge;
 
-          tooltip.style("left", xPosition + "px");
-          tooltip.style("top", yPosition + "px")
+          tooltip.style("left", xPosition + 30 + "px");
+          tooltip.style("top", yPosition - 30 + "px")
         })
         .on("mouseout", function(d) {
+          const highlightedCircle = d3.select(`#${this.id}`);
+          highlightedCircle.classed("highlighted", false);
+
           d3.select("#tooltip").classed("hidden", true);
         });
 
-      // this.labels = this.baseGroup.selectAll("text")
-      //   .data(this.dataset)
-      //   .enter()
-      //   .append("text")
-      //   .text(function(d) {
-      //     return d[0];
-      //   })
-      //   .attr("x", function(d) {
-      //     return vm.xScale(d[1]);
-      //   })
-      //   .attr("y", function(d) {
-      //     return vm.yScale(d[2]);
-      //   })
-      //   .attr("font-family", "sans-serif")
-      //   .attr("font-size", "11px")
-      //   .attr("fill", "red");
+      // Create x-axis
+      this.baseSvg.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0, ${this.svgHeight - this.margin.bottom})`)
+        .call(this.xAxis);
+
+      // Creae y-axis
+      this.baseSvg.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(${this.margin.left}, 0)`)
+        .call(this.yAxis);
     },
   },
 };
 </script>
 
 <style lang="stylus" scoped>
+#bubble-chart {
+  background-color: rgb(38, 41, 49);
+}
+
 table#tooltip {
   position: absolute;
   border-collapse: collapse;
-  background-color: white;
-  border: 2px solid gray;
+  background-color: lighten(rgb(38, 41, 49), 10%);
+  color: #ccc;
+  border: 2px solid #777;
   text-align: left;
   z-index: 1;
 
@@ -230,7 +233,7 @@ table#tooltip {
     tr {
       th, td {
         padding: 10px;
-        border-bottom: 1px solid gray;
+        border-bottom: 1px solid #777;
         border-collapse: collapse;
       }
       th {
@@ -250,24 +253,38 @@ table#tooltip {
 }
 
 #chart-container >>> .consumer-goods {
-  fill: red;
+  fill: rgba(255, 65, 70, 0.85);
 }
 #chart-container >>> .technology {
-  fill: orange;
+  fill: rgba(255, 147, 0, 0.85);
 }
 #chart-container >>> .financial {
-  fill: yellow;
+  fill: rgba(255, 255, 0, 0.85);
 }
 #chart-container >>> .healthcare {
-  fill: green;
+  fill: rgba(52, 170, 0, 0.85);
 }
 #chart-container >>> .services {
-  fill: pink;
+  fill: rgba(0, 209, 109, 0.85);
 }
 #chart-container >>> .basic-materials {
-  fill: violet;
+  fill: rgba(24, 163, 224, 0.85);
 }
 #chart-container >>> .industrial-goods {
-  fill: blue;
+  fill: rgba(89, 99, 209, 0.85);
+}
+
+#chart-container >>> .highlighted {
+  cursor: pointer;
+  stroke: white;
+}
+
+// Axis styles
+#chart-container >>> g.axis path, #chart-container >>> g.axis line {
+  stroke: #ccc;
+  shape-rendering: crispEdges;
+}
+#chart-container >>> g.axis text {
+  fill: #ccc;
 }
 </style>

@@ -29,26 +29,19 @@ export default {
         top: 20,
         right: 40,
         bottom: 20,
-        left: 20
+        left: 30
       },
       svgWidth: 800,
       svgHeight: 500,
-      baseGroup: null,
+      baseSvg: null,
       labels: null,
-      // Scale function variables
+      // Scale and axis variables
       xScale: null,
       yScale: null,
       rScale: null, // The scale used to calculate the radius of the circles
+      xAxis: null,
+      yAxis: null,
     };
-  },
-
-  computed: {
-    baseGroupWidth() {
-      return this.svgWidth - this.margin.left - this.margin.right;
-    },
-    baseGroupHeight() {
-      return this.svgHeight - this.margin.top - this.margin.bottom;
-    }
   },
 
   mounted() {
@@ -67,13 +60,13 @@ export default {
         .domain([0, d3.max(this.dataset, function(d) {
           return d[0];
         })])
-        .range([0, this.baseGroupWidth]);
+        .range([this.margin.left, this.svgWidth - this.margin.right]);
 
       this.yScale = d3.scaleLinear()
         .domain([0, d3.max(this.dataset, function(d) {
           return d[1];
         })])
-        .range([this.baseGroupHeight, 0]);
+        .range([this.svgHeight - this.margin.bottom, this.margin.top]);
 
       this.rScale = d3.scaleSqrt()
         .domain([0, d3.max(this.dataset, function(d) {
@@ -81,17 +74,24 @@ export default {
         })])
         .range([0, 20]);
 
-      // Append the SVG and base group elements using the margin convention
-      // https://bl.ocks.org/mbostock/3019563
-      this.baseGroup = d3.select("#chart-container")
+      // Define the x-axis
+      this.xAxis = d3.axisBottom()
+        .scale(this.xScale)
+        .ticks(5);
+
+      // Define the y-axis
+      this.yAxis = d3.axisLeft()
+        .scale(this.yScale)
+        .ticks(5);
+
+      // Create the baseSvg element
+      this.baseSvg = d3.select("#chart-container")
         .append("svg")
-          .attr("width", this.baseGroupWidth + this.margin.left + this.margin.right)
-          .attr("height", this.baseGroupHeight + this.margin.top + this.margin.bottom)
-        .append("g")
-          .attr("transform", `translate(${this.margin.left}, ${this.margin.top})`);
+          .attr("width", this.svgWidth)
+          .attr("height", this.svgHeight);
 
       // Create circles
-      this.baseGroup.selectAll("circle")
+      this.baseSvg.selectAll("circle")
         .data(this.dataset)
         .enter()
         .append("circle")
@@ -106,7 +106,7 @@ export default {
         });
 
       // Create labels
-      this.baseGroup.selectAll("text")
+      this.baseSvg.selectAll("text")
         .data(this.dataset)
         .enter()
         .append("text")
@@ -122,6 +122,18 @@ export default {
         .attr("font-family", "sans-serif")
         .attr("font-size", "11px")
         .attr("fill", "red");
+
+      // Create x-axis
+      this.baseSvg.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0, ${this.svgHeight - this.margin.bottom})`)
+        .call(this.xAxis);
+
+      // Creae y-axis
+      this.baseSvg.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(${this.margin.left}, 0)`)
+        .call(this.yAxis);
     },
   },
 };
